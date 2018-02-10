@@ -1,5 +1,7 @@
 [gd_scene load_steps=3 format=2]
 
+[ext_resource path="res://oculus/oculus_cv1_controller_right/oculus_cv1_controller_right.obj" type="ArrayMesh" id=1]
+
 [sub_resource type="GDScript" id=1]
 
 script/source = "extends ARVRController
@@ -13,40 +15,31 @@ func _ready():
 	visible = false
 	
 	# set our initial controller mesh scale
-	$Controller_mesh.scale = Vector3(ws, ws, ws)
+	$controller_mesh.scale = Vector3(ws, ws, ws)
 
 func _process(delta):
 	# apply changes to our world scale
 	var new_ws = ARVRServer.world_scale
 	if (ws != new_ws):
 		ws = new_ws
-		$Controller_mesh.scale = Vector3(ws, ws, ws)
+		$controller_mesh.scale = Vector3(ws, ws, ws)
 	
 	if !get_is_active():
 		visible = false
-	else:
-		if !visible:
-			# make it visible
-			visible = true
-			emit_signal(\"controller_activated\", self)
-"
+	elif !visible:
+		# make it visible
+		visible = true
+		emit_signal(\"controller_activated\", self)"
 
-[sub_resource type="CubeMesh" id=2]
+[node name="oculus_right_touch_controller" type="ARVRController" index="0"]
 
-size = Vector3( 0.05, 0.05, 0.05 )
-subdivide_width = 0
-subdivide_height = 0
-subdivide_depth = 0
-
-[node name="OVRController" type="ARVRController" index="0"]
-
-controller_id = 1
+controller_id = 2
 rumble = 0.0
 script = SubResource( 1 )
-_sections_unfolded = [ "Transform" ]
 
-[node name="Controller_mesh" type="MeshInstance" parent="." index="0"]
+[node name="controller_mesh" type="MeshInstance" parent="." index="0"]
 
+transform = Transform( 1, 0, 0, 0, 0.707107, -0.707107, 0, 0.707107, 0.707107, 0.01, 0.04, -0.03 )
 layers = 1
 material_override = null
 cast_shadow = 1
@@ -56,8 +49,9 @@ lod_min_distance = 0.0
 lod_min_hysteresis = 0.0
 lod_max_distance = 0.0
 lod_max_hysteresis = 0.0
-mesh = SubResource( 2 )
+mesh = ExtResource( 1 )
 skeleton = NodePath("..")
 material/0 = null
+_sections_unfolded = [ "Transform" ]
 
 

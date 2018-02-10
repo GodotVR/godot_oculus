@@ -231,7 +231,7 @@ godot_bool godot_arvr_initialize(void *p_data) {
 			arvr_data->frameIndex = 0;
 			arvr_data->oculus_is_initialized = true;
 
-			printf("Oculus - successfully initialized");
+			printf("Oculus - successfully initialized\n");
 		} else {
 			// cleanup...
 			for (int eye = 0; eye < 2; ++eye) {
@@ -254,6 +254,14 @@ void godot_arvr_uninitialize(void *p_data) {
 	if (arvr_data->oculus_is_initialized != NULL) {
 		// note, this will already be removed as the primary interface by
 		// ARVRInterfaceGDNative
+
+		for (int tracker = 0; tracker < MAX_TRACKERS; tracker++) {
+			if (arvr_data->trackers[tracker] != 0) {
+				// if we previously had our left touch controller, clean up
+				arvr_api->godot_arvr_remove_controller(arvr_data->trackers[tracker]);
+				arvr_data->trackers[tracker] = 0;
+			}			
+		}
 
 		for (int eye = 0; eye < 2; ++eye) {
 			if (arvr_data->eyeRenderTexture[eye] != NULL) {
@@ -475,6 +483,79 @@ void godot_arvr_commit_for_eye(void *p_data, godot_int p_eye, godot_rid *p_rende
 	}
 }
 
+void oculus_update_touch_controller(arvr_data_struct *p_arvr_data, int p_which) {
+	int hand = p_which == TRACKER_LEFT_TOUCH ? 0 : 1;
+	if (p_arvr_data->trackers[p_which] == 0) {
+		// need to init a new tracker
+		if (p_which == TRACKER_LEFT_TOUCH) {
+			p_arvr_data->trackers[p_which] = arvr_api->godot_arvr_add_controller("Left Oculus Touch Controller", 1, true, true);
+		} else {
+			p_arvr_data->trackers[p_which] = arvr_api->godot_arvr_add_controller("Right Oculus Touch Controller", 2, true, true);
+		}
+
+		p_arvr_data->handTriggerPressed[hand] = false;
+		p_arvr_data->indexTriggerPressed[hand] = false;
+	}
+
+	// note that I'm keeping the button assignments the same as we're currently using in OpenVR
+
+	// update button and touch states, note that godot will ignore buttons that didn't change
+	if (p_which == TRACKER_LEFT_TOUCH) {
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 1, p_arvr_data->inputState.Buttons & ovrButton_Y);
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 3, p_arvr_data->inputState.Buttons & ovrButton_Enter); // menu button
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 5, p_arvr_data->inputState.Touches & ovrTouch_X);
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 6, p_arvr_data->inputState.Touches & ovrTouch_Y);
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 7, p_arvr_data->inputState.Buttons & ovrButton_X);
+
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 9, p_arvr_data->inputState.Touches & ovrTouch_LThumbRest);
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 10, p_arvr_data->inputState.Touches & ovrTouch_LThumbUp);
+
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 11, p_arvr_data->inputState.Touches & ovrTouch_LIndexTrigger);
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 12, p_arvr_data->inputState.Touches & ovrTouch_LIndexPointing);
+
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 14, p_arvr_data->inputState.Buttons & ovrButton_LThumb);
+	} else {
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 1, p_arvr_data->inputState.Buttons & ovrButton_B);
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 3, p_arvr_data->inputState.Buttons & ovrButton_Home); // oculus button
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 5, p_arvr_data->inputState.Touches & ovrTouch_A);
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 6, p_arvr_data->inputState.Touches & ovrTouch_Y);
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 7, p_arvr_data->inputState.Buttons & ovrButton_A);
+
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 9, p_arvr_data->inputState.Touches & ovrTouch_RThumbRest);
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 10, p_arvr_data->inputState.Touches & ovrTouch_RThumbUp);
+
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 11, p_arvr_data->inputState.Touches & ovrTouch_RIndexTrigger);
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 12, p_arvr_data->inputState.Touches & ovrTouch_RIndexPointing);
+
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 14, p_arvr_data->inputState.Buttons & ovrButton_RThumb);
+	}
+
+	if (p_arvr_data->handTriggerPressed[hand] && p_arvr_data->inputState.HandTrigger[hand] < 0.4) {
+		p_arvr_data->handTriggerPressed[hand] = false;
+	} else if (!p_arvr_data->handTriggerPressed[hand] && p_arvr_data->inputState.HandTrigger[hand] > 0.6) {
+		p_arvr_data->handTriggerPressed[hand] = true;
+	}
+	arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 2, p_arvr_data->handTriggerPressed[hand]);
+
+	if (p_arvr_data->indexTriggerPressed[hand] && p_arvr_data->inputState.IndexTrigger[hand] < 0.4) {
+		p_arvr_data->indexTriggerPressed[hand] = false;
+	} else if (!p_arvr_data->indexTriggerPressed[hand] && p_arvr_data->inputState.IndexTrigger[hand] > 0.6) {
+		p_arvr_data->indexTriggerPressed[hand] = true;
+	}
+	arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 15, p_arvr_data->indexTriggerPressed[hand]);
+
+	// update axis states
+	arvr_api->godot_arvr_set_controller_axis(p_arvr_data->trackers[p_which], 0, p_arvr_data->inputState.Thumbstick[hand].x, true);
+	arvr_api->godot_arvr_set_controller_axis(p_arvr_data->trackers[p_which], 1, p_arvr_data->inputState.Thumbstick[hand].y, true);
+	arvr_api->godot_arvr_set_controller_axis(p_arvr_data->trackers[p_which], 2, p_arvr_data->inputState.IndexTrigger[hand], true);
+	arvr_api->godot_arvr_set_controller_axis(p_arvr_data->trackers[p_which], 3, p_arvr_data->inputState.HandTrigger[hand], true);
+
+	// update orientation and position
+	godot_transform transform;
+	oculus_transform_from_pose(&transform, &p_arvr_data->trackState.HandPoses[hand].ThePose , 1.0);
+	arvr_api->godot_arvr_set_controller_transform(p_arvr_data->trackers[p_which], &transform, true, true);
+}
+
 void godot_arvr_process(void *p_data) {
 	arvr_data_struct *arvr_data = (arvr_data_struct *)p_data;
 
@@ -502,7 +583,35 @@ void godot_arvr_process(void *p_data) {
 
 			ovr_GetEyePoses(arvr_data->session, arvr_data->frameIndex, ovrTrue, arvr_data->HmdToEyePose, arvr_data->EyeRenderPose, &arvr_data->sensorSampleTime);
 
-			// and now handle our controllers...
+			// update our controller state
+			double frame_timing = 1.0; // need to do something with this..
+			arvr_data->trackState = ovr_GetTrackingState(arvr_data->session, frame_timing, ovrFalse);
+			ovr_GetInputState(arvr_data->session, ovrControllerType_Active, &arvr_data->inputState);
+
+			// and now handle our controllers, not that Godot is perfectly capable of handling the XBox controller, no need to add double support
+			unsigned int which_controllers_do_we_have = ovr_GetConnectedControllerTypes(arvr_data->session);
+
+			if (which_controllers_do_we_have & ovrControllerType_LTouch) {
+				oculus_update_touch_controller(arvr_data, TRACKER_LEFT_TOUCH);
+			} else if (arvr_data->trackers[TRACKER_LEFT_TOUCH] != 0) {
+				// if we previously had our left touch controller, clean up
+				arvr_api->godot_arvr_remove_controller(arvr_data->trackers[TRACKER_LEFT_TOUCH]);
+				arvr_data->trackers[TRACKER_LEFT_TOUCH] = 0;
+			}
+
+			if (which_controllers_do_we_have & ovrControllerType_RTouch) {
+				oculus_update_touch_controller(arvr_data, TRACKER_RIGHT_TOUCH);
+			} else if (arvr_data->trackers[TRACKER_RIGHT_TOUCH] != 0) {
+				// if we previously had our right touch controller, clean up
+				arvr_api->godot_arvr_remove_controller(arvr_data->trackers[TRACKER_RIGHT_TOUCH]);
+				arvr_data->trackers[TRACKER_RIGHT_TOUCH] = 0;
+			}
+
+			if (which_controllers_do_we_have & ovrControllerType_Remote) {
+				// should add support for our remote... 
+			} else {
+				// if we previously had our remote, clean up
+			}
 		}
 	}
 }
@@ -515,6 +624,9 @@ void *godot_arvr_constructor(godot_object *p_instance) {
 	arvr_data->oculus_is_initialized = false;
 	arvr_data->eyeRenderTexture[0] = NULL;
 	arvr_data->eyeRenderTexture[1] = NULL;
+	for (int tracker = 0; tracker < MAX_TRACKERS; tracker++) {
+		arvr_data->trackers[tracker] = 0;
+	}
 
     // Initializes LibOVR, and the Rift
 	ovrInitParams initParams = { ovrInit_RequestVersion, OVR_MINOR_VERSION, NULL, 0, 0 };
