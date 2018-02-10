@@ -221,11 +221,11 @@ lod_max_hysteresis = 0.0
 mesh = null
 skeleton = NodePath("..")
 
-[node name="OVRFirstPerson" parent="." index="5" instance=ExtResource( 4 )]
+[node name="FirstPerson" parent="." index="5" instance=ExtResource( 4 )]
 
-[node name="Function_Teleport" parent="OVRFirstPerson/Left_Hand" index="1" instance=ExtResource( 5 )]
+[node name="Function_Teleport" parent="FirstPerson/Left_Hand" index="1" instance=ExtResource( 5 )]
 
-[node name="Function_Direct_movement" parent="OVRFirstPerson/Right_Hand" index="1" instance=ExtResource( 6 )]
+[node name="Function_Direct_movement" parent="FirstPerson/Right_Hand" index="1" instance=ExtResource( 6 )]
 
 
-[editable path="OVRFirstPerson"]
+[editable path="FirstPerson"]

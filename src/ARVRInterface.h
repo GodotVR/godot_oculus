@@ -37,6 +37,12 @@ public:
 
 extern const godot_arvr_interface_gdnative interface_struct;
 
+enum trackers {
+	TRACKER_LEFT_TOUCH,
+	TRACKER_RIGHT_TOUCH,
+	MAX_TRACKERS
+};
+
 typedef struct arvr_data_struct {
 	blit_shader shader;
 
@@ -54,6 +60,14 @@ typedef struct arvr_data_struct {
 	uint32_t height;
 
 	TextureBuffer * eyeRenderTexture[2];
+
+	ovrTrackingState trackState;
+	ovrInputState inputState;
+
+	bool handTriggerPressed[2];
+	bool indexTriggerPressed[2];
+
+	uint32_t trackers[MAX_TRACKERS];
 } arvr_data_struct;
 
 #endif /* !OVR_ARVR_INTERFACE_H */

@@ -1,0 +1,19 @@
+[remap]
+
+importer="wavefront_obj"
+type="Mesh"
+path="res://.import/oculus_cv1_controller_left.obj-ae5e3bd4a1838ef2252d0c8acfd36f72.mesh"
+
+[deps]
+
+files=[ "res://.import/oculus_cv1_controller_left.obj-ae5e3bd4a1838ef2252d0c8acfd36f72.mesh" ]
+
+source_file="res://oculus/oculus_cv1_controller_left/oculus_cv1_controller_left.obj"
+source_md5="2e4552d993a5b77efd3286ec3a3a338f"
+
+dest_files=[ "res://.import/oculus_cv1_controller_left.obj-ae5e3bd4a1838ef2252d0c8acfd36f72.mesh", "res://.import/oculus_cv1_controller_left.obj-ae5e3bd4a1838ef2252d0c8acfd36f72.mesh" ]
+dest_md5="d9728cd0213704541a4e4fcdcc10fab1"
+
+[params]
+
+generate_tangents=true
