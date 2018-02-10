@@ -1,0 +1,17 @@
+[general]
+
+singleton=true
+load_once=true
+symbol_prefix="godot_oculus_"
+
+[entry]
+
+X11.64=""
+Windows.64="res://bin/godot_oculus.dll"
+OSX.64=""
+
+[dependencies]
+
+X11.64=[""]
+Windows=[""]
+OSX.64=[""]
