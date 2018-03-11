@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=2]
+[gd_scene load_steps=12 format=2]
 
 [ext_resource path="res://Main.gd" type="Script" id=1]
 [ext_resource path="res://Milkyway.png" type="Texture" id=2]
@@ -7,15 +7,15 @@
 [ext_resource path="res://oculus/Function_Teleport.tscn" type="PackedScene" id=5]
 [ext_resource path="res://oculus/Function_Direct_movement.tscn" type="PackedScene" id=6]
 
-[sub_resource type="PanoramaSky" id=1]
+[sub_resource type="PanoramaSky" id=6]
 
 radiance_size = 4
 panorama = ExtResource( 2 )
 
-[sub_resource type="Environment" id=2]
+[sub_resource type="Environment" id=7]
 
 background_mode = 2
-background_sky = SubResource( 1 )
+background_sky = SubResource( 6 )
 background_sky_custom_fov = 0.0
 background_color = Color( 0, 0.53833, 0.703125, 1 )
 background_energy = 1.0
@@ -36,7 +36,7 @@ fog_height_enabled = false
 fog_height_min = 0.0
 fog_height_max = 100.0
 fog_height_curve = 1.0
-tonemap_mode = 0
+tonemap_mode = 2
 tonemap_exposure = 1.0
 tonemap_white = 1.0
 auto_exposure_enabled = false
@@ -92,7 +92,7 @@ adjustment_contrast = 1.0
 adjustment_saturation = 1.0
 _sections_unfolded = [ "Ambient Light", "Background", "Tonemap" ]
 
-[sub_resource type="SpatialMaterial" id=3]
+[sub_resource type="SpatialMaterial" id=8]
 
 render_priority = 0
 flags_transparent = false
@@ -144,20 +144,24 @@ proximity_fade_enable = false
 distance_fade_enable = false
 _sections_unfolded = [ "Albedo" ]
 
-[sub_resource type="PlaneMesh" id=4]
+[sub_resource type="PlaneMesh" id=9]
 
-material = SubResource( 3 )
+material = SubResource( 8 )
 size = Vector2( 10, 10 )
 subdivide_width = 10
 subdivide_depth = 10
 
-[node name="Main" type="Spatial"]
+[sub_resource type="PlaneShape" id=5]
+
+plane = Plane( 0, 1, 0, 0 )
+
+[node name="Main" type="Spatial" index="0"]
 
 script = ExtResource( 1 )
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." index="0"]
 
-environment = SubResource( 2 )
+environment = SubResource( 7 )
 
 [node name="DirectionalLight" type="DirectionalLight" parent="." index="1"]
 
@@ -187,7 +191,18 @@ directional_shadow_depth_range = 0
 directional_shadow_max_distance = 200.0
 _sections_unfolded = [ "Transform" ]
 
-[node name="Ground" type="MeshInstance" parent="." index="2"]
+[node name="Ground" type="StaticBody" parent="." index="2"]
+
+input_ray_pickable = true
+input_capture_on_drag = false
+collision_layer = 1
+collision_mask = 1
+friction = 1.0
+bounce = 0.0
+constant_linear_velocity = Vector3( 0, 0, 0 )
+constant_angular_velocity = Vector3( 0, 0, 0 )
+
+[node name="Ground" type="MeshInstance" parent="Ground" index="0"]
 
 transform = Transform( 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0 )
 layers = 1
@@ -199,10 +214,15 @@ lod_min_distance = 0.0
 lod_min_hysteresis = 0.0
 lod_max_distance = 0.0
 lod_max_hysteresis = 0.0
-mesh = SubResource( 4 )
+mesh = SubResource( 9 )
 skeleton = NodePath("..")
 material/0 = null
 _sections_unfolded = [ "Transform" ]
+
+[node name="CollisionShape" type="CollisionShape" parent="Ground" index="1"]
+
+shape = SubResource( 5 )
+disabled = false
 
 [node name="Table" parent="." index="3" instance=ExtResource( 3 )]
 
@@ -224,6 +244,8 @@ skeleton = NodePath("..")
 [node name="FirstPerson" parent="." index="5" instance=ExtResource( 4 )]
 
 [node name="Function_Teleport" parent="FirstPerson/Left_Hand" index="1" instance=ExtResource( 5 )]
+
+origin = NodePath("../..")
 
 [node name="Function_Direct_movement" parent="FirstPerson/Right_Hand" index="1" instance=ExtResource( 6 )]
 
