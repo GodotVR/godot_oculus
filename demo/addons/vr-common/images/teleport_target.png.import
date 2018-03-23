@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path.s3tc="res://.import/teleport_target.png-56181f520f0ad3caa2658e2d14b8ed1e.s3tc.stex"
-path.etc2="res://.import/teleport_target.png-56181f520f0ad3caa2658e2d14b8ed1e.etc2.stex"
+path.s3tc="res://.import/teleport_target.png-779f853f62e0e2207f5821dfbc8b780c.s3tc.stex"
+path.etc2="res://.import/teleport_target.png-779f853f62e0e2207f5821dfbc8b780c.etc2.stex"
 
 [deps]
 
-source_file="res://oculus/teleport_target.png"
+source_file="res://addons/vr-common/images/teleport_target.png"
 source_md5="ab0554ac76bb0ee9e51deccf3ec6d571"
 
-dest_files=[ "res://.import/teleport_target.png-56181f520f0ad3caa2658e2d14b8ed1e.s3tc.stex", "res://.import/teleport_target.png-56181f520f0ad3caa2658e2d14b8ed1e.etc2.stex" ]
+dest_files=[ "res://.import/teleport_target.png-779f853f62e0e2207f5821dfbc8b780c.s3tc.stex", "res://.import/teleport_target.png-779f853f62e0e2207f5821dfbc8b780c.etc2.stex" ]
 dest_md5="a68e3dc73ea45f52178c3c72bd179396"
 
 [params]

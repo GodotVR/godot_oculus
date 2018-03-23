@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/external_controller01_spec.png-6b7e1fd1b251a0d69d258ad7b30e0cf8.stex"
+path="res://.import/icon.png-e0c81101eabb15062112f5cd874460a6.stex"
 
 [deps]
 
-source_file="res://oculus/oculus_cv1_controller_left/external_controller01_spec.png"
-source_md5="2ac840df2a51292ed372b9128f9f7db3"
+source_file="res://addons/godot-oculus/icon.png"
+source_md5="eafe02953c96cfe709ce402d99f14cc0"
 
-dest_files=[ "res://.import/external_controller01_spec.png-6b7e1fd1b251a0d69d258ad7b30e0cf8.stex" ]
-dest_md5="f4af23b86457c7bed526040379d64d83"
+dest_files=[ "res://.import/icon.png-e0c81101eabb15062112f5cd874460a6.stex" ]
+dest_md5="0224238a728908d9266cd1ac2f8f0cc0"
 
 [params]
 

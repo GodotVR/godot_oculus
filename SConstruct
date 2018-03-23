@@ -69,5 +69,5 @@ sources = []
 add_sources(sources, "src")
 sources.append(godot_glad_path + "/glad.c")
 
-library = env.SharedLibrary(target='demo/bin/godot_oculus', source=sources)
+library = env.SharedLibrary(target='demo/addons/godot-oculus/bin/win64/godot_oculus', source=sources)
 Default(library)

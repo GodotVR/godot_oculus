@@ -26,7 +26,7 @@ window/vsync/use_vsync=false
 
 [gdnative]
 
-singletons=[ "res://bin/godot_oculus.gdnlib" ]
+singletons=[ "res://addons/godot-oculus/godot_oculus.gdnlib" ]
 
 [rendering]
 

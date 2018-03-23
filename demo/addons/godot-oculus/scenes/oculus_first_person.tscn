@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=2]
 
-[ext_resource path="res://oculus/oculus_left_touch_controller.tscn" type="PackedScene" id=1]
-[ext_resource path="res://oculus/oculus_right_touch_controller.tscn" type="PackedScene" id=2]
+[ext_resource path="res://addons/godot-oculus/scenes/oculus_left_touch_controller.tscn" type="PackedScene" id=1]
+[ext_resource path="res://addons/godot-oculus/scenes/oculus_right_touch_controller.tscn" type="PackedScene" id=2]
 
 [sub_resource type="GDScript" id=1]
 
