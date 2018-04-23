@@ -7,7 +7,7 @@ symbol_prefix="godot_oculus_"
 [entry]
 
 X11.64=""
-Windows.64="res://bin/godot_oculus.dll"
+Windows.64="res://addons/godot-oculus/bin/win64/godot_oculus.dll"
 OSX.64=""
 
 [dependencies]

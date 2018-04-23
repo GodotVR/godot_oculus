@@ -3,19 +3,19 @@
 [ext_resource path="res://Main.gd" type="Script" id=1]
 [ext_resource path="res://Milkyway.png" type="Texture" id=2]
 [ext_resource path="res://Table.tscn" type="PackedScene" id=3]
-[ext_resource path="res://oculus/oculus_first_person.tscn" type="PackedScene" id=4]
-[ext_resource path="res://oculus/Function_Teleport.tscn" type="PackedScene" id=5]
-[ext_resource path="res://oculus/Function_Direct_movement.tscn" type="PackedScene" id=6]
+[ext_resource path="res://addons/godot-oculus/scenes/oculus_first_person.tscn" type="PackedScene" id=4]
+[ext_resource path="res://addons/vr-common/functions/Function_Teleport.tscn" type="PackedScene" id=5]
+[ext_resource path="res://addons/vr-common/functions/Function_Direct_movement.tscn" type="PackedScene" id=6]
 
-[sub_resource type="PanoramaSky" id=6]
+[sub_resource type="PanoramaSky" id=1]
 
 radiance_size = 4
 panorama = ExtResource( 2 )
 
-[sub_resource type="Environment" id=7]
+[sub_resource type="Environment" id=2]
 
 background_mode = 2
-background_sky = SubResource( 6 )
+background_sky = SubResource( 1 )
 background_sky_custom_fov = 0.0
 background_color = Color( 0, 0.53833, 0.703125, 1 )
 background_energy = 1.0
@@ -92,7 +92,7 @@ adjustment_contrast = 1.0
 adjustment_saturation = 1.0
 _sections_unfolded = [ "Ambient Light", "Background", "Tonemap" ]
 
-[sub_resource type="SpatialMaterial" id=8]
+[sub_resource type="SpatialMaterial" id=3]
 
 render_priority = 0
 flags_transparent = false
@@ -144,9 +144,9 @@ proximity_fade_enable = false
 distance_fade_enable = false
 _sections_unfolded = [ "Albedo" ]
 
-[sub_resource type="PlaneMesh" id=9]
+[sub_resource type="PlaneMesh" id=4]
 
-material = SubResource( 8 )
+material = SubResource( 3 )
 size = Vector2( 10, 10 )
 subdivide_width = 10
 subdivide_depth = 10
@@ -161,7 +161,7 @@ script = ExtResource( 1 )
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." index="0"]
 
-environment = SubResource( 7 )
+environment = SubResource( 2 )
 
 [node name="DirectionalLight" type="DirectionalLight" parent="." index="1"]
 
@@ -214,7 +214,7 @@ lod_min_distance = 0.0
 lod_min_hysteresis = 0.0
 lod_max_distance = 0.0
 lod_max_hysteresis = 0.0
-mesh = SubResource( 9 )
+mesh = SubResource( 4 )
 skeleton = NodePath("..")
 material/0 = null
 _sections_unfolded = [ "Transform" ]
@@ -248,6 +248,9 @@ skeleton = NodePath("..")
 origin = NodePath("../..")
 
 [node name="Function_Direct_movement" parent="FirstPerson/Right_Hand" index="1" instance=ExtResource( 6 )]
+
+origin = NodePath("../..")
+camera = NodePath("../../ARVRCamera")
 
 
 [editable path="FirstPerson"]
