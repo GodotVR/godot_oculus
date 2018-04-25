@@ -118,8 +118,11 @@ void TextureBuffer::SetRenderSurface() {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, curTexId, 0);
 
 	glViewport(0, 0, width, height);
-//    glClear(GL_COLOR_BUFFER_BIT); // don't waste your time, we're overwriting the entire buffer
-	glEnable(GL_FRAMEBUFFER_SRGB);
+//	glClear(GL_COLOR_BUFFER_BIT); // don't waste your time, we're overwriting the entire buffer
+
+	// Enabling SRGB ensures we get a conversion from linear colour space to standard RGB colour space
+	// Looks like Godot already renders using standard RGB colour space (or atleast when HDR is used) so lets not do this.
+//	glEnable(GL_FRAMEBUFFER_SRGB);
 }
 
 void TextureBuffer::UnsetRenderSurface() {
