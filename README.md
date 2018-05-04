@@ -5,12 +5,13 @@ See demo project as an example for how to use the plugin
 
 This is a Windows only plugin!
 
-Currently only the HMD is handled, controllers coming soon!
+The leading version of this repository now lives at:
+https://github.com/GodotVR/godot_oculus
 
 License
 -------
 Please check the Oculus SDK for license information in relation to the Oculus SDK used in this project.
-The rest of this project is released under an unlicense.
+The rest of this project is released under an MIT license.
 
 Compiling
 ---------
@@ -21,3 +22,13 @@ After cloning this repository make sure to initialise the submodules with `git s
 When you've pulled a newer version make sure to run `git submodule update`
 
 Then run `scons oculus=<path to oculus SDK>`
+
+About this repository
+---------------------
+This repository was created by and is maintained by Bastiaan Olij a.k.a. Mux213
+
+You can follow me on twitter for regular updates here:
+https://twitter.com/mux213
+
+Videos about my work with Godot including tutorials on working with VR in Godot can by found on my youtube page:
+https://www.youtube.com/channel/UCrbLJYzJjDf2p-vJC011lYw
