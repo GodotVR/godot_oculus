@@ -2,7 +2,7 @@
 import os, subprocess
 
 # Local dependency paths
-godot_glad_path = ARGUMENTS.get("headers", "glad")
+godot_glad_path = ARGUMENTS.get("glad", "glad")
 godot_headers_path = ARGUMENTS.get("headers", "godot_headers/")
 oculus_path = ARGUMENTS.get("oculus", os.getenv("OCULUS_SDK_PATH", "../../OculusSDK/"))
 
