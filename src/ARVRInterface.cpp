@@ -559,6 +559,36 @@ void oculus_update_touch_controller(arvr_data_struct *p_arvr_data, int p_which) 
 	arvr_api->godot_arvr_set_controller_transform(p_arvr_data->trackers[p_which], &transform, true, true);
 }
 
+void oculus_update_remote_controller(arvr_data_struct *p_arvr_data) {
+	if (p_arvr_data->trackers[TRACKER_OCULUS_REMOTE] == 0) {
+		// It doesn't actualy track orientation or position, bit of a shame it doesn't do orientation actually...
+		// Really should register this as only a joystick
+		p_arvr_data->trackers[TRACKER_OCULUS_REMOTE] = arvr_api->godot_arvr_add_controller("Oculus Remote", 0, false, false);
+	}
+
+	// VolUp/Down is caught by Oculus and may not be given to us...
+	// 4 = JOY_L -> ovrButton_VolDown (volume down)
+	arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[TRACKER_OCULUS_REMOTE], 4, p_arvr_data->inputState.Buttons & ovrButton_VolDown);
+	// 5 = JOY_R -> ovrButton_VolUp (volume up)
+	arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[TRACKER_OCULUS_REMOTE], 5, p_arvr_data->inputState.Buttons & ovrButton_VolUp);
+
+	// Yes, SeLect and Back overlap with A and B on the touch controllers AND with A and B on the xbox controller, we do not get separate states for these!
+	// 10 = JOY_SELECT -> ovrButton_A (select)
+	arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[TRACKER_OCULUS_REMOTE], 10, p_arvr_data->inputState.Buttons & ovrButton_A);
+	// 11 = JOY_START -> ovrButton_B (back, not a good match but we don't have a back)
+	arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[TRACKER_OCULUS_REMOTE], 11, p_arvr_data->inputState.Buttons & ovrButton_B);
+
+	// And same for d-pad so these will become pressed even when pressed on the xbox controller... ugh
+	// 12 = JOY_DPAD_UP -> ovrButton_Up
+	arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[TRACKER_OCULUS_REMOTE], 12, p_arvr_data->inputState.Buttons & ovrButton_Up);
+	// 13 = JOY_DPAD_DOWN -> ovrButton_Down
+	arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[TRACKER_OCULUS_REMOTE], 13, p_arvr_data->inputState.Buttons & ovrButton_Down);
+	// 14 = JOY_DPAD_LEFT -> ovrButton_Left
+	arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[TRACKER_OCULUS_REMOTE], 14, p_arvr_data->inputState.Buttons & ovrButton_Left);
+	// 15 = JOY_DPAD_RIGHT -> ovrButton_Right
+	arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[TRACKER_OCULUS_REMOTE], 15, p_arvr_data->inputState.Buttons & ovrButton_Right);
+}
+
 void godot_arvr_process(void *p_data) {
 	arvr_data_struct *arvr_data = (arvr_data_struct *)p_data;
 
@@ -611,9 +641,10 @@ void godot_arvr_process(void *p_data) {
 			}
 
 			if (which_controllers_do_we_have & ovrControllerType_Remote) {
-				// should add support for our remote... 
+				oculus_update_remote_controller(arvr_data); 
 			} else {
-				// if we previously had our remote, clean up
+				arvr_api->godot_arvr_remove_controller(arvr_data->trackers[TRACKER_OCULUS_REMOTE]);
+				arvr_data->trackers[TRACKER_OCULUS_REMOTE] = 0;
 			}
 		}
 	}
