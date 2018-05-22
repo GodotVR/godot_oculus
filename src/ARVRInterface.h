@@ -40,6 +40,7 @@ extern const godot_arvr_interface_gdnative interface_struct;
 enum trackers {
 	TRACKER_LEFT_TOUCH,
 	TRACKER_RIGHT_TOUCH,
+	TRACKER_OCULUS_REMOTE,
 	MAX_TRACKERS
 };
 
