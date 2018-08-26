@@ -9,12 +9,10 @@ path="res://.import/oculus_cv1_controller_left.obj-c7c67497a9b7a91755e9d2180383c
 files=[ "res://.import/oculus_cv1_controller_left.obj-c7c67497a9b7a91755e9d2180383c007.mesh" ]
 
 source_file="res://addons/godot-oculus/scenes/oculus_cv1_controller_left/oculus_cv1_controller_left.obj"
-source_md5="2f56c75f808e1ce4413d82a416abb783"
-
 dest_files=[ "res://.import/oculus_cv1_controller_left.obj-c7c67497a9b7a91755e9d2180383c007.mesh", "res://.import/oculus_cv1_controller_left.obj-c7c67497a9b7a91755e9d2180383c007.mesh" ]
-dest_md5="11b2558699d668c77c01be3400ca412b"
 
 [params]
 
 generate_tangents=true
 scale_mesh=Vector3( 1, 1, 1 )
+optimize_mesh=true
