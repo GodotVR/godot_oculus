@@ -1,12 +1,18 @@
 # Oculus SDK GDNative plugin for Godot
 
 This repository contains the source code for the Oculus plugin for Godot.
-See demo project as an example for how to use the plugin
+See demo project as an example for how to use the plugin.
 
 This is a Windows only plugin!
 
 The leading version of this repository now lives at:
 https://github.com/GodotVR/godot_oculus
+
+Versions
+--------
+Note that due to a breaking change in Godot 3.1 the current master of this repository creates a GDNative module that can only be used with Godot 3.1 or later.
+
+If you want to build this module for Godot 3.0 please checkout the 3.0 branch.
 
 License
 -------
