@@ -1,10 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////
 // Our main ARVRInterface code for our Oculus GDNative module
 
-// Note, even though this is pure C code, we're using the C++ compiler as
-// Microsoft never updated their C compiler to understand more modern dialects
-// and openvr uses pesky things such as namespaces
-
 #include "ARVRInterface.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -447,7 +443,9 @@ void godot_arvr_commit_for_eye(void *p_data, godot_int p_eye, godot_rid *p_rende
 		// buffers. Something to discuss with Juan some day but I think this is posing serious 
 		// problem with the way our forward renderer handles several effects...
 		// Worth further investigation though as this is wasteful...
-		blit_render(&arvr_data->shader, texid);
+		if (arvr_data->shader != NULL) {
+			arvr_data->shader->render(texid);
+		}
 
 		// Avoids an error when calling SetAndClearRenderSurface during next iteration.
 		// Without this, during the next while loop iteration SetAndClearRenderSurface
@@ -521,7 +519,7 @@ void oculus_update_touch_controller(arvr_data_struct *p_arvr_data, int p_which) 
 		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 1, p_arvr_data->inputState.Buttons & ovrButton_B);
 		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 3, p_arvr_data->inputState.Buttons & ovrButton_Home); // oculus button
 		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 5, p_arvr_data->inputState.Touches & ovrTouch_A);
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 6, p_arvr_data->inputState.Touches & ovrTouch_Y);
+		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 6, p_arvr_data->inputState.Touches & ovrTouch_B);
 		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 7, p_arvr_data->inputState.Buttons & ovrButton_A);
 
 		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 9, p_arvr_data->inputState.Touches & ovrTouch_RThumbRest);
@@ -639,7 +637,7 @@ void *godot_arvr_constructor(godot_object *p_instance) {
     }
 
 	// we should have only one so should be pretty safe
-	arvr_data->shader = blit_shader_init();
+	arvr_data->shader = new blit_shader();
 
 	return arvr_data;
 };
@@ -653,7 +651,10 @@ void godot_arvr_destructor(void *p_data) {
 			godot_arvr_uninitialize(p_data);
 		}
 
-		blit_shader_cleanup(&arvr_data->shader);
+		if (arvr_data->shader != NULL) {
+			delete arvr_data->shader;
+			arvr_data->shader = NULL;
+		}
 
 		api->godot_free(p_data);
 	};

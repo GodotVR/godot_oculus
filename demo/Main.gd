@@ -5,6 +5,12 @@ func _ready():
 	var arvr_interface = ARVRServer.find_interface("Oculus")
 	if arvr_interface and arvr_interface.initialize():
 		get_viewport().arvr = true
+		
+		# make sure vsync is disabled or we'll be limited to 60fps
+		OS.vsync_enabled = false
+		
+		# up our physics to 90fps to get in sync with our rendering
+		Engine.target_fps = 90
 
 func _process(delta):
 	# Test for escape to close application, space to reset our reference frame

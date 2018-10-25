@@ -4,10 +4,6 @@
 // Written by Bastiaan "Mux213" Olij, 
 // with loads of help from Thomas "Karroffel" Herzog
 
-// Note, even though this is pure C code, we're using the C++ compiler as
-// Microsoft never updated their C compiler to understand more modern dialects
-// and openvr uses pesky things such as namespaces
-
 #include "godot_oculus.h"
 
 void GDN_EXPORT godot_oculus_gdnative_singleton() {
