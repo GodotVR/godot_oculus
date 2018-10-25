@@ -10,22 +10,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct blit_shader {
+class blit_shader {
+private:
 	GLuint program = 0;
 	GLuint vao = 0;
 	GLuint vbo = 0;
-} blit_shader;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+	static float vertice_data[12];
 
-void blit_render(blit_shader *p_blit_shader, GLuint p_texture_id);
-blit_shader blit_shader_init();
-void blit_shader_cleanup(blit_shader *p_blit_shader);
+	void compile_shader(GLuint shader, const char *src);
+	bool link_shader();
+public:
+	blit_shader();
+	~blit_shader();
 
-#ifdef __cplusplus
-}
-#endif
+	void render(GLuint p_texture_id);
+};
 
 #endif /* BLIT_SHADER_H */

@@ -44,7 +44,7 @@ enum trackers {
 };
 
 typedef struct arvr_data_struct {
-	blit_shader shader;
+	blit_shader * shader;
 
 	bool oculus_is_initialized;
 	ovrSession session;

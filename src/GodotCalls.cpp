@@ -2,10 +2,6 @@
 // Just exposing an interface to a few callback functions on Godot objects
 // Basically just ported some of the functions in the cpp_bindings for use in C
 
-// Note, even though this is pure C code, we're using the C++ compiler as
-// Microsoft never updated their C compiler to understand more modern dialects
-// and openvr uses pesky things such as namespaces
-
 #include "GodotCalls.h"
 #include <glad/glad.h>
 
