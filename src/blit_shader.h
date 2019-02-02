@@ -12,9 +12,10 @@
 
 class blit_shader {
 private:
-	GLuint program = 0;
-	GLuint vao = 0;
-	GLuint vbo = 0;
+	GLuint program;
+	GLuint vao;
+	GLuint vbo;
+	bool is_initialised;
 
 	static float vertice_data[12];
 
@@ -24,6 +25,7 @@ public:
 	blit_shader();
 	~blit_shader();
 
+	bool initialise_on_first_use();
 	void render(GLuint p_texture_id);
 };
 

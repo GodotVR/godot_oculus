@@ -396,6 +396,8 @@ void godot_arvr_fill_projection_for_eye(void *p_data, godot_real *p_projection, 
 	};
 };
 
+int godot_arvr_glad_status = 0;
+
 void godot_arvr_commit_for_eye(void *p_data, godot_int p_eye, godot_rid *p_render_target, godot_rect2 *p_screen_rect) {
 	arvr_data_struct *arvr_data = (arvr_data_struct *)p_data;
 
@@ -432,54 +434,66 @@ void godot_arvr_commit_for_eye(void *p_data, godot_int p_eye, godot_rid *p_rende
 	};
 
 	if (arvr_data->oculus_is_initialized) {
-		uint32_t texid = arvr_api->godot_arvr_get_texid(p_render_target);
-		int eye = p_eye == 2 ? 1 : 0;
-
-		// blit to OVRs buffers			
-		// Switch to eye render target
-		arvr_data->eyeRenderTexture[eye]->SetRenderSurface();
-
-		// copy our buffer...Unfortunately, at this time Godot can't render directly into Oculus'
-		// buffers. Something to discuss with Juan some day but I think this is posing serious 
-		// problem with the way our forward renderer handles several effects...
-		// Worth further investigation though as this is wasteful...
-		if (arvr_data->shader != NULL) {
-			arvr_data->shader->render(texid);
+		// We can't piggy back on glad in Godot and we need to make sure it is initialized in this thread
+		if (godot_arvr_glad_status == 0) {
+			if (gladLoadGL()) {
+				godot_arvr_glad_status = 1;
+			} else {
+				godot_arvr_glad_status = 2;
+				printf("Error initializing GLAD\n");
+			}
 		}
 
-		// Avoids an error when calling SetAndClearRenderSurface during next iteration.
-		// Without this, during the next while loop iteration SetAndClearRenderSurface
-		// would bind a framebuffer with an invalid COLOR_ATTACHMENT0 because the texture ID
-		// associated with COLOR_ATTACHMENT0 had been unlocked by calling wglDXUnlockObjectsNV.
-		arvr_data->eyeRenderTexture[eye]->UnsetRenderSurface();
+		if (godot_arvr_glad_status == 1) {
+			uint32_t texid = arvr_api->godot_arvr_get_texid(p_render_target);
+			int eye = p_eye == 2 ? 1 : 0;
 
-		// Commit changes to the textures so they get picked up frame
-		arvr_data->eyeRenderTexture[eye]->Commit();
+			// blit to OVRs buffers			
+			// Switch to eye render target
+			arvr_data->eyeRenderTexture[eye]->SetRenderSurface();
 
-		if (p_eye == 2) {
-			// both eyes are rendered, time to output...
-
-			ovrLayerEyeFov ld;
-			ld.Header.Type  = ovrLayerType_EyeFov;
-			ld.Header.Flags = ovrLayerFlag_TextureOriginAtBottomLeft;   // Because OpenGL.
-
-			for (int eye = 0; eye < 2; ++eye) {
-				ld.ColorTexture[eye] = arvr_data->eyeRenderTexture[eye]->TextureChain;
-				ld.Viewport[eye]     = arvr_data->eyeRenderTexture[eye]->GetViewport();
-				ld.Fov[eye]          = arvr_data->hmdDesc.DefaultEyeFov[eye];
-				ld.RenderPose[eye]   = arvr_data->EyeRenderPose[eye];
-				ld.SensorSampleTime  = arvr_data->sensorSampleTime;
+			// copy our buffer...Unfortunately, at this time Godot can't render directly into Oculus'
+			// buffers. Something to discuss with Juan some day but I think this is posing serious 
+			// problem with the way our forward renderer handles several effects...
+			// Worth further investigation though as this is wasteful...
+			if (arvr_data->shader != NULL) {
+				arvr_data->shader->render(texid);
 			}
 
-			ovrLayerHeader* layers = &ld.Header;
-			ovrResult result = ovr_SubmitFrame(arvr_data->session, arvr_data->frameIndex, nullptr, &layers, 1);
+			// Avoids an error when calling SetAndClearRenderSurface during next iteration.
+			// Without this, during the next while loop iteration SetAndClearRenderSurface
+			// would bind a framebuffer with an invalid COLOR_ATTACHMENT0 because the texture ID
+			// associated with COLOR_ATTACHMENT0 had been unlocked by calling wglDXUnlockObjectsNV.
+			arvr_data->eyeRenderTexture[eye]->UnsetRenderSurface();
 
-			// exit the rendering loop if submit returns an error, will retry on ovrError_DisplayLost
-			if (!OVR_SUCCESS(result)) {
-				// need to do something here...
+			// Commit changes to the textures so they get picked up frame
+			arvr_data->eyeRenderTexture[eye]->Commit();
+
+			if (p_eye == 2) {
+				// both eyes are rendered, time to output...
+
+				ovrLayerEyeFov ld;
+				ld.Header.Type  = ovrLayerType_EyeFov;
+				ld.Header.Flags = ovrLayerFlag_TextureOriginAtBottomLeft;   // Because OpenGL.
+
+				for (int eye = 0; eye < 2; ++eye) {
+					ld.ColorTexture[eye] = arvr_data->eyeRenderTexture[eye]->TextureChain;
+					ld.Viewport[eye]     = arvr_data->eyeRenderTexture[eye]->GetViewport();
+					ld.Fov[eye]          = arvr_data->hmdDesc.DefaultEyeFov[eye];
+					ld.RenderPose[eye]   = arvr_data->EyeRenderPose[eye];
+					ld.SensorSampleTime  = arvr_data->sensorSampleTime;
+				}
+
+				ovrLayerHeader* layers = &ld.Header;
+				ovrResult result = ovr_SubmitFrame(arvr_data->session, arvr_data->frameIndex, nullptr, &layers, 1);
+
+				// exit the rendering loop if submit returns an error, will retry on ovrError_DisplayLost
+				if (!OVR_SUCCESS(result)) {
+					// need to do something here...
+				}
+
+				arvr_data->frameIndex++;
 			}
-
-			arvr_data->frameIndex++;
 		}
 	}
 }
@@ -629,6 +643,8 @@ void *godot_arvr_constructor(godot_object *p_instance) {
 		arvr_data->trackers[tracker] = 0;
 	}
 
+	printf("Init Oculus SDK\n");
+
     // Initializes LibOVR, and the Rift
 	ovrInitParams initParams = { ovrInit_RequestVersion, OVR_MINOR_VERSION, NULL, 0, 0 };
 	ovrResult result = ovr_Initialize(&initParams);
@@ -636,8 +652,12 @@ void *godot_arvr_constructor(godot_object *p_instance) {
     	printf("Failed to initialize libOVR.\n");
     }
 
+	printf("Init blitshader\n");
+
 	// we should have only one so should be pretty safe
 	arvr_data->shader = new blit_shader();
+
+	printf("Finished\n");
 
 	return arvr_data;
 };

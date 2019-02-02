@@ -97,10 +97,11 @@ bool blit_shader::link_shader() {
 }
 
 void blit_shader::render(GLuint p_texture_id) {
-	GLuint was_program;
-	glGetIntegerv(GL_CURRENT_PROGRAM, (GLint *)&was_program);
+	if (initialise_on_first_use()) {
+		// remember our current program
+		GLuint was_program;
+		glGetIntegerv(GL_CURRENT_PROGRAM, (GLint *)&was_program);
 
-	if (program != 0) {
 		// set our shader up
 		glUseProgram(program);
 
@@ -120,32 +121,46 @@ void blit_shader::render(GLuint p_texture_id) {
 	}
 }
 
-blit_shader::blit_shader() {
-	// Create our shader program
-	if (link_shader()) {
-		// Need a Vertex Array Object
-		glGenVertexArrays(1, &vao);
-
-		// Bind our VAO, all relevant state changes are bound to our VAO, will be unset when we unbind, and reset when we bind...
-		glBindVertexArray(vao);
-
-		// Need a Vertex Buffer Object
-		glGenBuffers(1, &vbo);
-
-		// Now bind our Vertex Buffer Object and load up some data!
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 12, vertice_data, GL_STATIC_DRAW);
-
-		// And setup our attributes
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (GLvoid *)0);
-
-		// and unbind our vao to return back to our old state
-		glBindVertexArray(0);
+bool blit_shader::initialise_on_first_use() {
+	if (is_initialised) {
+		// don't run this again, even if it failed		
 	} else {
-		vao = 0;
-		vbo = 0;
+		// even if we fail, mark this as initialized
+		is_initialised = true;
+
+		// Create our shader program
+		if (link_shader()) {
+			// Need a Vertex Array Object
+			glGenVertexArrays(1, &vao);
+
+			// Bind our VAO, all relevant state changes are bound to our VAO, will be unset when we unbind, and reset when we bind...
+			glBindVertexArray(vao);
+
+			// Need a Vertex Buffer Object
+			glGenBuffers(1, &vbo);
+
+			// Now bind our Vertex Buffer Object and load up some data!
+			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 12, vertice_data, GL_STATIC_DRAW);
+
+			// And setup our attributes
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (GLvoid *)0);
+
+			// and unbind our vao to return back to our old state
+			glBindVertexArray(0);
+		}
 	}
+
+	return program != 0;
+}
+
+
+blit_shader::blit_shader() {
+	program = 0;
+	vao = 0;
+	vbo = 0;
+	is_initialised = false;
 }
 
 blit_shader::~blit_shader() {
@@ -163,5 +178,7 @@ blit_shader::~blit_shader() {
 		glDeleteBuffers(1, &vbo);
 		vbo = 0;
 	}
+
+	is_initialised = false;
 }
 
