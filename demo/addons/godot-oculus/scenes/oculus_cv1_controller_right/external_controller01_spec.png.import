@@ -3,20 +3,21 @@
 importer="texture"
 type="StreamTexture"
 path="res://.import/external_controller01_spec.png-f633df11612bf2df42e3d54626cdaacd.stex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://addons/godot-oculus/scenes/oculus_cv1_controller_right/external_controller01_spec.png"
-source_md5="2ac840df2a51292ed372b9128f9f7db3"
-
 dest_files=[ "res://.import/external_controller01_spec.png-f633df11612bf2df42e3d54626cdaacd.stex" ]
-dest_md5="f4af23b86457c7bed526040379d64d83"
 
 [params]
 
 compress/mode=0
 compress/lossy_quality=0.7
 compress/hdr_mode=0
+compress/bptc_ldr=0
 compress/normal_map=0
 flags/repeat=0
 flags/filter=true
@@ -26,6 +27,7 @@ flags/srgb=2
 process/fix_alpha_border=true
 process/premult_alpha=false
 process/HDR_as_SRGB=false
+process/invert_color=false
 stream=false
 size_limit=0
 detect_3d=true
