@@ -4,7 +4,7 @@ import os, subprocess
 # Local dependency paths
 godot_glad_path = ARGUMENTS.get("glad", "glad")
 godot_headers_path = ARGUMENTS.get("headers", "godot_headers/")
-oculus_path = ARGUMENTS.get("oculus", os.getenv("OCULUS_SDK_PATH", "../../OculusSDK/"))
+oculus_path = ARGUMENTS.get("oculus", os.getenv("OCULUS_SDK_PATH", "../../ovr_sdk_win_1.35.0/"))
 
 # default to release build, add target=debug to build debug build
 target = ARGUMENTS.get("target", "release")
