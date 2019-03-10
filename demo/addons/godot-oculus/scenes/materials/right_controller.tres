@@ -1,0 +1,11 @@
+[gd_resource type="SpatialMaterial" load_steps=2 format=2]
+
+[ext_resource path="res://addons/godot-oculus/scenes/oculus_cv1_controller_right/external_controller01_col.png" type="Texture" id=1]
+
+[resource]
+resource_name = "external_contoller_01:blinn1SG"
+albedo_color = Color( 0, 0, 0, 1 )
+albedo_texture = ExtResource( 1 )
+metallic = 0.4
+roughness = 0.6
+
