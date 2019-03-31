@@ -13,6 +13,7 @@ extern "C" {
 
 int64_t OS_get_ticks_msec();
 godot_vector2 OS_get_screen_size(const int64_t screen = -1);
+godot_int OS_get_current_video_driver();
 
 #ifdef __cplusplus
 }

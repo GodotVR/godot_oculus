@@ -4,136 +4,6 @@
 #include "ARVRInterface.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////
-// first some stuff from the oculus SDK samples... :)
-static ovrGraphicsLuid GetDefaultAdapterLuid() {
-	ovrGraphicsLuid luid = ovrGraphicsLuid();
-
-	#if defined(_WIN32)
-		IDXGIFactory* factory = nullptr;
-
-		if (SUCCEEDED(CreateDXGIFactory(IID_PPV_ARGS(&factory)))) {
-			IDXGIAdapter* adapter = nullptr;
-
-			if (SUCCEEDED(factory->EnumAdapters(0, &adapter))) {
-				DXGI_ADAPTER_DESC desc;
-
-				adapter->GetDesc(&desc);
-				memcpy(&luid, &desc.AdapterLuid, sizeof(luid));
-				adapter->Release();
-			}
-
-			factory->Release();
-		}
-	#endif
-
-	return luid;
-};
-
-static int Compare(const ovrGraphicsLuid& lhs, const ovrGraphicsLuid& rhs) {
-	return memcmp(&lhs, &rhs, sizeof(ovrGraphicsLuid));
-}
-
-TextureBuffer::TextureBuffer(ovrSession p_session, int p_width, int p_height) :
-	Session(p_session),
-	TextureChain(nullptr),
-	texId(0),
-	fboId(0)
-{
-	width = p_width;
-	height = p_height;
-
-	ovrTextureSwapChainDesc desc = {};
-	desc.Type = ovrTexture_2D;
-	desc.ArraySize = 1;
-	desc.Width = width;
-	desc.Height = height;
-	desc.MipLevels = 1;
-	desc.Format = OVR_FORMAT_R8G8B8A8_UNORM_SRGB;
-	desc.SampleCount = 1;
-	desc.StaticImage = ovrFalse;
-
-	ovrResult result = ovr_CreateTextureSwapChainGL(Session, &desc, &TextureChain);
-
-	int length = 0;
-	ovr_GetTextureSwapChainLength(Session, TextureChain, &length);
-
-	if(OVR_SUCCESS(result)) {
-		for (int i = 0; i < length; ++i) {
-			GLuint chainTexId;
-			ovr_GetTextureSwapChainBufferGL(Session, TextureChain, i, &chainTexId);
-			glBindTexture(GL_TEXTURE_2D, chainTexId);
-
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		}
-	}
-
-	glGenFramebuffers(1, &fboId);
-}
-
-TextureBuffer::~TextureBuffer() {
-	if (TextureChain) {
-		ovr_DestroyTextureSwapChain(Session, TextureChain);
-		TextureChain = nullptr;
-	}
-	if (texId) {
-		glDeleteTextures(1, &texId);
-		texId = 0;
-	}
-	if (fboId) {
-		glDeleteFramebuffers(1, &fboId);
-		fboId = 0;
-	}
-}
-
-ovrRecti TextureBuffer::GetViewport() {
-	ovrRecti ret;
-
-	ret.Pos.x = 0;
-	ret.Pos.y = 0;
-	ret.Size.w = width;
-	ret.Size.h = height;
-
-	return ret;
-}
-
-void TextureBuffer::SetRenderSurface() {
-	GLuint curTexId;
-
-	if (TextureChain) {
-		int curIndex;
-		ovr_GetTextureSwapChainCurrentIndex(Session, TextureChain, &curIndex);
-		ovr_GetTextureSwapChainBufferGL(Session, TextureChain, curIndex, &curTexId);
-	} else {
-		curTexId = texId;
-	}
-
-	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, curTexId, 0);
-
-	glViewport(0, 0, width, height);
-//	glClear(GL_COLOR_BUFFER_BIT); // don't waste your time, we're overwriting the entire buffer
-
-	// Enabling SRGB ensures we get a conversion from linear colour space to standard RGB colour space
-	// Looks like Godot already renders using standard RGB colour space (or atleast when HDR is used) so lets not do this.
-//	glEnable(GL_FRAMEBUFFER_SRGB);
-}
-
-void TextureBuffer::UnsetRenderSurface() {
-	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
-void TextureBuffer::Commit() {
-	if (TextureChain) {
-		ovr_CommitTextureSwapChain(Session, TextureChain);
-	}
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////
 // our ARVR interface
 godot_string godot_arvr_get_name(const void *p_data) {
 	godot_string ret;
@@ -161,8 +31,7 @@ godot_bool godot_arvr_get_anchor_detection_is_enabled(const void *p_data) {
 	return ret;
 }
 
-void godot_arvr_set_anchor_detection_is_enabled(void *p_data,
-		bool p_enable){
+void godot_arvr_set_anchor_detection_is_enabled(void *p_data, bool p_enable) {
 	// we ignore this, not supported in this interface!
 }
 
@@ -178,7 +47,7 @@ godot_bool godot_arvr_is_initialized(const void *p_data) {
 	godot_bool ret;
 	arvr_data_struct *arvr_data = (arvr_data_struct *)p_data;
 
-	ret = arvr_data->oculus_is_initialized;
+	ret = arvr_data->state == OVR_INITIALISED;
 
 	return ret;
 }
@@ -186,71 +55,44 @@ godot_bool godot_arvr_is_initialized(const void *p_data) {
 godot_bool godot_arvr_initialize(void *p_data) {
 	arvr_data_struct *arvr_data = (arvr_data_struct *)p_data;
 
-	if (!arvr_data->oculus_is_initialized) {
+	if (arvr_data->state == OVR_INITIALISED) {
+		return true;
+	} else if (arvr_data->state == OVR_NOT_FOUND) {
+		return false;
+	} else {
 		// initialise this interface, so initialize any 3rd party libraries, open up
 		// HMD window if required, etc.
 		printf("Oculus - initializing...\n");
 
-		ovrResult result = ovr_Create(&arvr_data->session, &arvr_data->luid);
-		if (!OVR_SUCCESS(result)) {
-			printf("Oculus - Couldn''t initialize Oculus SDK\n");
-			return false;
-		}
+		// first time? check if we can initialise our OVR module
+		if (arvr_data->state == OVR_NOT_CHECKED) {
+			// Initializes LibOVR, and the Rift
+			ovrInitParams initParams = { ovrInit_RequestVersion, OVR_MINOR_VERSION, NULL, 0, 0 };
+			ovrResult result = ovr_Initialize(&initParams);
+			if (!OVR_SUCCESS(result)) {
+				arvr_data->state = OVR_NOT_FOUND;
 
-		if (Compare(arvr_data->luid, GetDefaultAdapterLuid())) {
-			// If luid that the Rift is on is not the default adapter LUID...
-			printf("Oculus - Oculus SDK is on a different adapter. If you have multiple graphics cards make sure Godot and the Oculus client are set to use the same GPU!!\n");
-			return false;
-		}
-
-		arvr_data->hmdDesc = ovr_GetHmdDesc(arvr_data->session);
-
-		// Make eye render buffers
-		bool success = true;
-		for (int eye = 0; eye < 2 && success; ++eye) {
-			ovrSizei idealTextureSize = ovr_GetFovTextureSize(arvr_data->session, ovrEyeType(eye), arvr_data->hmdDesc.DefaultEyeFov[eye], 1);
-			arvr_data->eyeRenderTexture[eye] = new TextureBuffer(arvr_data->session, idealTextureSize.w, idealTextureSize.h);
-
-			if (!arvr_data->eyeRenderTexture[eye]->TextureChain) {
-				printf("Oculus - couldn''t create render texture for eye %i\n", eye+1);
-				success = false;
-			} else {
-				// Could these textures possibly have different sizes?!?! We assume not or else we use the size of our right eye...
-				arvr_data->width = idealTextureSize.w;
-				arvr_data->height = idealTextureSize.h;
-
-				printf("Oculus - created buffer for eye %i (%i,%i)\n", eye+1, arvr_data->width, arvr_data->height);
+				printf("Failed to initialize libOVR.\n");
+				return false;
 			}
 		}
 
-		if (success) {
-			// Assuming standing, Godot can handle sitting
-			ovr_SetTrackingOriginType(arvr_data->session, ovrTrackingOrigin_FloorLevel);
+		arvr_data->state = OVR_INITIALISED;
 
-			arvr_data->frameIndex = 0;
-			arvr_data->oculus_is_initialized = true;
+		// we delay setting up our OVR session until we're called from our render
+		// thread
 
-			printf("Oculus - successfully initialized\n");
-		} else {
-			// cleanup...
-			for (int eye = 0; eye < 2; ++eye) {
-				if (arvr_data->eyeRenderTexture[eye] != NULL) {
-					delete arvr_data->eyeRenderTexture[eye];
-					arvr_data->eyeRenderTexture[eye] = NULL;
-				}
-			}
-			ovr_Destroy(arvr_data->session);
-		}
+		printf("Oculus - successfully initialized\n");
 	}
 
 	// and return our result
-	return arvr_data->oculus_is_initialized;
+	return arvr_data->state == OVR_INITIALISED;
 }
 
 void godot_arvr_uninitialize(void *p_data) {
 	arvr_data_struct *arvr_data = (arvr_data_struct *)p_data;
 
-	if (arvr_data->oculus_is_initialized != NULL) {
+	if (arvr_data->state == OVR_INITIALISED) {
 		// note, this will already be removed as the primary interface by
 		// ARVRInterfaceGDNative
 
@@ -259,7 +101,7 @@ void godot_arvr_uninitialize(void *p_data) {
 				// if we previously had our left touch controller, clean up
 				arvr_api->godot_arvr_remove_controller(arvr_data->trackers[tracker]);
 				arvr_data->trackers[tracker] = 0;
-			}			
+			}
 		}
 
 		for (int eye = 0; eye < 2; ++eye) {
@@ -268,68 +110,47 @@ void godot_arvr_uninitialize(void *p_data) {
 				arvr_data->eyeRenderTexture[eye] = NULL;
 			}
 		}
-		ovr_Destroy(arvr_data->session);
 
-		arvr_data->oculus_is_initialized = false;
-	};
-};
+		if (arvr_data->session != NULL) {
+			delete arvr_data->session;
+			arvr_data->session = NULL;
+		}
+
+		arvr_data->state = OVR_NOT_INITIALISED;
+	}
+}
 
 godot_vector2 godot_arvr_get_render_targetsize(const void *p_data) {
 	arvr_data_struct *arvr_data = (arvr_data_struct *)p_data;
+	OVRSession *session = arvr_data->session;
 	godot_vector2 size;
 
-	if (arvr_data->oculus_is_initialized) {
+	if ((arvr_data->state == OVR_INITIALISED) && (session != NULL)) {
 		api->godot_vector2_new(&size, arvr_data->width, arvr_data->height);
 	} else {
 		api->godot_vector2_new(&size, 500, 500);
 	}
 
 	return size;
-};
-
-void oculus_transform_from_pose(godot_transform *p_dest, ovrPosef *p_pose , float p_world_scale) {
-	godot_quat q;
-	godot_basis basis;
-	godot_vector3 origin;
-
-	api->godot_quat_new(&q, p_pose->Orientation.x, p_pose->Orientation.y, p_pose->Orientation.z, p_pose->Orientation.w);
-	api->godot_basis_new_with_euler_quat(&basis, &q);
-
-	api->godot_vector3_new(&origin, p_pose->Position.x * p_world_scale, p_pose->Position.y * p_world_scale, p_pose->Position.z * p_world_scale);
-	api->godot_transform_new(p_dest, &basis, &origin);
-}
-
-void oculus_transform_from_poses(godot_transform *p_dest, ovrPosef *p_pose_a, ovrPosef *p_pose_b , float p_world_scale) {
-	godot_quat q;
-	godot_basis basis;
-	godot_vector3 origin;
-
-	// assume both poses are oriented the same
-	api->godot_quat_new(&q, p_pose_a->Orientation.x, p_pose_a->Orientation.y, p_pose_a->Orientation.z, p_pose_a->Orientation.w);
-	api->godot_basis_new_with_euler_quat(&basis, &q);
-
-	// find center
-	api->godot_vector3_new(&origin
-		, 0.5 * (p_pose_a->Position.x + p_pose_b->Position.x) * p_world_scale
-		, 0.5 * (p_pose_a->Position.y + p_pose_b->Position.y) * p_world_scale
-		, 0.5 * (p_pose_a->Position.z + p_pose_b->Position.z) * p_world_scale);
-	api->godot_transform_new(p_dest, &basis, &origin);
 }
 
 godot_transform godot_arvr_get_transform_for_eye(void *p_data, godot_int p_eye, godot_transform *p_cam_transform) {
 	arvr_data_struct *arvr_data = (arvr_data_struct *)p_data;
+	OVRSession *session = arvr_data->session;
+
 	godot_transform transform_for_eye;
 	godot_transform reference_frame = arvr_api->godot_arvr_get_reference_frame();
 	godot_transform ret;
 	godot_vector3 offset;
 	godot_real world_scale = arvr_api->godot_arvr_get_worldscale();
 
-	if (p_eye == 0) {
-		// ok, we actually get our left and right eye position from tracking data, not our head center with eye offsets
-		// so lets find the center :)
-		oculus_transform_from_poses(&transform_for_eye, &arvr_data->EyeRenderPose[0], &arvr_data->EyeRenderPose[1], world_scale);		
-	} else if (arvr_data->oculus_is_initialized) {
-		oculus_transform_from_pose(&transform_for_eye, &arvr_data->EyeRenderPose[p_eye == 2 ? 1 : 0], world_scale);
+	if ((arvr_data->state == OVR_INITIALISED) && (session != NULL)) {
+		if (p_eye == 0) {
+			// Mono is requested when we want to update our refence frame or position our camera in the scene
+			arvr_data->session->hmd_transform(&transform_for_eye, world_scale);
+		} else {
+			arvr_data->session->eye_transform(p_eye == 2 ? 1 : 0, &transform_for_eye, world_scale);
+		}
 	} else {
 		// really not needed, just being paranoid..
 		godot_vector3 offset;
@@ -340,64 +161,32 @@ godot_transform godot_arvr_get_transform_for_eye(void *p_data, godot_int p_eye, 
 			api->godot_vector3_new(&offset, 0.035 * world_scale, 0.0, 0.0);
 		};
 		api->godot_transform_translated(&transform_for_eye, &offset);
-	};
+	}
 
-	// Now construct our full transform, the order may be in reverse, have to test
-	// :)
+	// Now construct our full transform
 	ret = *p_cam_transform;
 	ret = api->godot_transform_operator_multiply(&ret, &reference_frame);
-//	ret = api->godot_transform_operator_multiply(&ret, &arvr_data->hmd_transform);
+	//	ret = api->godot_transform_operator_multiply(&ret,
+	//&arvr_data->hmd_transform);
 	ret = api->godot_transform_operator_multiply(&ret, &transform_for_eye);
 
 	return ret;
-};
+}
 
 void godot_arvr_fill_projection_for_eye(void *p_data, godot_real *p_projection, godot_int p_eye, godot_real p_aspect, godot_real p_z_near, godot_real p_z_far) {
 	arvr_data_struct *arvr_data = (arvr_data_struct *)p_data;
+	OVRSession *session = arvr_data->session;
 
-	if (arvr_data->oculus_is_initialized) {
-		// Based on code from OVR_StereoProjection.cpp
-		ovrFovPort tanHalfFov = arvr_data->hmdDesc.DefaultEyeFov[p_eye == 2 ? 1 : 0];
-
-		float projXScale = 2.0f / (tanHalfFov.LeftTan + tanHalfFov.RightTan);
-		float projXOffset = (tanHalfFov.LeftTan - tanHalfFov.RightTan) * projXScale * 0.5f;
-		float projYScale = 2.0f / (tanHalfFov.UpTan + tanHalfFov.DownTan);
-		float projYOffset = (tanHalfFov.UpTan - tanHalfFov.DownTan) * projYScale * 0.5f;
-
-		// Produces X result, mapping clip edges to [-w,+w]
-		p_projection[0] = projXScale;
-		p_projection[4] = 0.0f;
-		p_projection[8] = -projXOffset;
-		p_projection[12] = 0.0f;
-
-		// Produces Y result, mapping clip edges to [-w,+w]
-		// Hey - why is that YOffset negated?
-		// It's because a projection matrix transforms from world coords with Y=up,
-		// whereas this is derived from an NDC scaling, which is Y=down.
-		p_projection[1] = 0.0f;
-		p_projection[5] = projYScale;
-		p_projection[9] = projYOffset;
-		p_projection[13] = 0.0f;
-
-		// Produces Z-buffer result - app needs to fill this in with whatever Z range it wants.
-		// We'll just use some defaults for now.
-		p_projection[2] = 0.0f;
-		p_projection[6] = 0.0f;
-		p_projection[10] = -(p_z_near + p_z_far) / (p_z_far - p_z_near);
-		p_projection[14] = -2.0f * p_z_near * p_z_far / (p_z_far - p_z_near);
-
-		// Produces W result (= Z in)
-		p_projection[3] = 0.0f;
-		p_projection[7] = 0.0f;
-		p_projection[11] = -1.0;
-		p_projection[15] = 0.0f;
+	if (arvr_data->state == OVR_INITIALISED && session != NULL) {
+		session->projection_matrix(p_eye == 2 ? 1 : 0, p_projection, p_z_near, p_z_far);
 	} else {
 		// uhm, should do something here really..
-	};
-};
+	}
+}
 
 void godot_arvr_commit_for_eye(void *p_data, godot_int p_eye, godot_rid *p_render_target, godot_rect2 *p_screen_rect) {
 	arvr_data_struct *arvr_data = (arvr_data_struct *)p_data;
+	OVRSession *session = arvr_data->session;
 
 	// This function is responsible for outputting the final render buffer for
 	// each eye.
@@ -414,7 +203,8 @@ void godot_arvr_commit_for_eye(void *p_data, godot_int p_eye, godot_rid *p_rende
 	godot_vector2 render_size = godot_arvr_get_render_targetsize(p_data);
 
 	if (p_eye == 1 && !api->godot_rect2_has_no_area(&screen_rect)) {
-		// blit as mono, attempt to keep our aspect ratio and center our render buffer
+		// blit as mono, attempt to keep our aspect ratio and center our render
+		// buffer
 		float new_height = screen_rect.size.x * (render_size.y / render_size.x);
 		if (new_height > screen_rect.size.y) {
 			screen_rect.position.y = (0.5 * screen_rect.size.y) - (0.5 * new_height);
@@ -426,136 +216,183 @@ void godot_arvr_commit_for_eye(void *p_data, godot_int p_eye, godot_rid *p_rende
 			screen_rect.size.x = new_width;
 		};
 
-		// printf("Blit: %0.2f, %0.2f - %0.2f, %0.2f\n",screen_rect.position.x,screen_rect.position.y,screen_rect.size.x,screen_rect.size.y);
+		// printf("Blit: %0.2f, %0.2f - %0.2f,
+		// %0.2f\n",screen_rect.position.x,screen_rect.position.y,screen_rect.size.x,screen_rect.size.y);
 
 		arvr_api->godot_arvr_blit(0, p_render_target, &screen_rect);
-	};
+	}
 
-	if (arvr_data->oculus_is_initialized) {
-		uint32_t texid = arvr_api->godot_arvr_get_texid(p_render_target);
+	if (arvr_data->state == OVR_INITIALISED && session != NULL) {
 		int eye = p_eye == 2 ? 1 : 0;
 
-		// blit to OVRs buffers			
-		// Switch to eye render target
-		arvr_data->eyeRenderTexture[eye]->SetRenderSurface();
+		if (!arvr_data->has_external_texture_support) {
+			uint32_t texid = arvr_api->godot_arvr_get_texid(p_render_target);
 
-		// copy our buffer...Unfortunately, at this time Godot can't render directly into Oculus'
-		// buffers. Something to discuss with Juan some day but I think this is posing serious 
-		// problem with the way our forward renderer handles several effects...
-		// Worth further investigation though as this is wasteful...
-		if (arvr_data->shader != NULL) {
-			arvr_data->shader->render(texid);
+			// make sure we have a buffer
+			if (arvr_data->eyeRenderTexture[eye] == NULL) {
+				arvr_data->eyeRenderTexture[eye] = session->make_texture_buffer(eye, true, OS_get_current_video_driver());
+			}
+
+			if (arvr_data->eyeRenderTexture[eye]->TextureChain) {
+				// blit to OVRs buffers
+				// Switch to eye render target
+				arvr_data->eyeRenderTexture[eye]->set_render_surface();
+
+				// copy our buffer...
+				if (arvr_data->shader == NULL) {
+					arvr_data->shader = new blit_shader();
+				}
+				if (arvr_data->shader != NULL) {
+					arvr_data->shader->render(texid);
+				}
+
+				// Avoids an error when calling SetAndClearRenderSurface during next
+				// iteration. Without this, during the next while loop iteration
+				// SetAndClearRenderSurface would bind a framebuffer with an invalid
+				// COLOR_ATTACHMENT0 because the texture ID associated with
+				// COLOR_ATTACHMENT0 had been unlocked by calling wglDXUnlockObjectsNV.
+				arvr_data->eyeRenderTexture[eye]->unset_render_surface();
+
+				// Commit changes to the textures so they get picked up frame
+				arvr_data->eyeRenderTexture[eye]->commit();
+			}
+		} else if (arvr_data->eyeRenderTexture[eye]->TextureChain) {
+			// Commit changes to the textures so they get picked up frame
+			arvr_data->eyeRenderTexture[eye]->commit();
 		}
-
-		// Avoids an error when calling SetAndClearRenderSurface during next iteration.
-		// Without this, during the next while loop iteration SetAndClearRenderSurface
-		// would bind a framebuffer with an invalid COLOR_ATTACHMENT0 because the texture ID
-		// associated with COLOR_ATTACHMENT0 had been unlocked by calling wglDXUnlockObjectsNV.
-		arvr_data->eyeRenderTexture[eye]->UnsetRenderSurface();
-
-		// Commit changes to the textures so they get picked up frame
-		arvr_data->eyeRenderTexture[eye]->Commit();
 
 		if (p_eye == 2) {
 			// both eyes are rendered, time to output...
-
-			ovrLayerEyeFov ld;
-			ld.Header.Type  = ovrLayerType_EyeFov;
-			ld.Header.Flags = ovrLayerFlag_TextureOriginAtBottomLeft;   // Because OpenGL.
-
-			for (int eye = 0; eye < 2; ++eye) {
-				ld.ColorTexture[eye] = arvr_data->eyeRenderTexture[eye]->TextureChain;
-				ld.Viewport[eye]     = arvr_data->eyeRenderTexture[eye]->GetViewport();
-				ld.Fov[eye]          = arvr_data->hmdDesc.DefaultEyeFov[eye];
-				ld.RenderPose[eye]   = arvr_data->EyeRenderPose[eye];
-				ld.SensorSampleTime  = arvr_data->sensorSampleTime;
+			if (!session->submit_frame(arvr_data->eyeRenderTexture, 2)) {
+				// do something here?
 			}
-
-			ovrLayerHeader* layers = &ld.Header;
-			ovrResult result = ovr_SubmitFrame(arvr_data->session, arvr_data->frameIndex, nullptr, &layers, 1);
-
-			// exit the rendering loop if submit returns an error, will retry on ovrError_DisplayLost
-			if (!OVR_SUCCESS(result)) {
-				// need to do something here...
-			}
-
-			arvr_data->frameIndex++;
 		}
 	}
 }
 
 void oculus_update_touch_controller(arvr_data_struct *p_arvr_data, int p_which) {
+	OVRSession *session = p_arvr_data->session;
+
 	int hand = p_which == TRACKER_LEFT_TOUCH ? 0 : 1;
 	if (p_arvr_data->trackers[p_which] == 0) {
 		// need to init a new tracker
 		if (p_which == TRACKER_LEFT_TOUCH) {
-			p_arvr_data->trackers[p_which] = arvr_api->godot_arvr_add_controller("Left Oculus Touch Controller", 1, true, true);
+			p_arvr_data->trackers[p_which] = arvr_api->godot_arvr_add_controller(
+					"Left Oculus Touch Controller", 1, true, true);
 		} else {
-			p_arvr_data->trackers[p_which] = arvr_api->godot_arvr_add_controller("Right Oculus Touch Controller", 2, true, true);
+			p_arvr_data->trackers[p_which] = arvr_api->godot_arvr_add_controller(
+					"Right Oculus Touch Controller", 2, true, true);
 		}
 
 		p_arvr_data->handTriggerPressed[hand] = false;
 		p_arvr_data->indexTriggerPressed[hand] = false;
 	}
 
-	// note that I'm keeping the button assignments the same as we're currently using in OpenVR
+	// note that I'm keeping the button assignments the same as we're currently
+	// using in OpenVR
 
-	// update button and touch states, note that godot will ignore buttons that didn't change
+	// update button and touch states, note that godot will ignore buttons that
+	// didn't change
 	if (p_which == TRACKER_LEFT_TOUCH) {
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 1, p_arvr_data->inputState.Buttons & ovrButton_Y);
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 3, p_arvr_data->inputState.Buttons & ovrButton_Enter); // menu button
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 5, p_arvr_data->inputState.Touches & ovrTouch_X);
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 6, p_arvr_data->inputState.Touches & ovrTouch_Y);
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 7, p_arvr_data->inputState.Buttons & ovrButton_X);
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 1,
+				session->is_button_pressed(ovrButton_Y));
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 3,
+				session->is_button_pressed(ovrButton_Enter)); // menu button
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 5,
+				session->is_button_touched(ovrTouch_X));
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 6,
+				session->is_button_touched(ovrTouch_Y));
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 7,
+				session->is_button_pressed(ovrButton_X));
 
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 9, p_arvr_data->inputState.Touches & ovrTouch_LThumbRest);
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 10, p_arvr_data->inputState.Touches & ovrTouch_LThumbUp);
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 9,
+				session->is_button_touched(ovrTouch_LThumbRest));
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 10,
+				session->is_button_touched(ovrTouch_LThumbUp));
 
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 11, p_arvr_data->inputState.Touches & ovrTouch_LIndexTrigger);
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 12, p_arvr_data->inputState.Touches & ovrTouch_LIndexPointing);
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 11,
+				session->is_button_touched(ovrTouch_LIndexTrigger));
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 12,
+				session->is_button_touched(ovrTouch_LIndexPointing));
 
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 14, p_arvr_data->inputState.Buttons & ovrButton_LThumb);
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 14,
+				session->is_button_pressed(ovrButton_LThumb));
 	} else {
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 1, p_arvr_data->inputState.Buttons & ovrButton_B);
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 3, p_arvr_data->inputState.Buttons & ovrButton_Home); // oculus button
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 5, p_arvr_data->inputState.Touches & ovrTouch_A);
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 6, p_arvr_data->inputState.Touches & ovrTouch_B);
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 7, p_arvr_data->inputState.Buttons & ovrButton_A);
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 1,
+				session->is_button_pressed(ovrButton_B));
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 3,
+				session->is_button_pressed(ovrButton_Home)); // oculus button
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 5,
+				session->is_button_touched(ovrTouch_A));
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 6,
+				session->is_button_touched(ovrTouch_B));
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 7,
+				session->is_button_pressed(ovrButton_A));
 
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 9, p_arvr_data->inputState.Touches & ovrTouch_RThumbRest);
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 10, p_arvr_data->inputState.Touches & ovrTouch_RThumbUp);
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 9,
+				session->is_button_pressed(ovrTouch_RThumbRest));
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 10,
+				session->is_button_pressed(ovrTouch_RThumbUp));
 
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 11, p_arvr_data->inputState.Touches & ovrTouch_RIndexTrigger);
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 12, p_arvr_data->inputState.Touches & ovrTouch_RIndexPointing);
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 11,
+				session->is_button_touched(ovrTouch_RIndexTrigger));
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 12,
+				session->is_button_touched(ovrTouch_RIndexPointing));
 
-		arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 14, p_arvr_data->inputState.Buttons & ovrButton_RThumb);
+		arvr_api->godot_arvr_set_controller_button(
+				p_arvr_data->trackers[p_which], 14,
+				session->is_button_pressed(ovrButton_RThumb));
 	}
 
-	if (p_arvr_data->handTriggerPressed[hand] && p_arvr_data->inputState.HandTrigger[hand] < 0.4) {
+	float hand_trigger = session->hand_trigger(hand);
+	if (p_arvr_data->handTriggerPressed[hand] && hand_trigger < 0.4) {
 		p_arvr_data->handTriggerPressed[hand] = false;
-	} else if (!p_arvr_data->handTriggerPressed[hand] && p_arvr_data->inputState.HandTrigger[hand] > 0.6) {
+	} else if (!p_arvr_data->handTriggerPressed[hand] && hand_trigger > 0.6) {
 		p_arvr_data->handTriggerPressed[hand] = true;
 	}
 	arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 2, p_arvr_data->handTriggerPressed[hand]);
 
-	if (p_arvr_data->indexTriggerPressed[hand] && p_arvr_data->inputState.IndexTrigger[hand] < 0.4) {
+	float index_trigger = session->index_trigger(hand);
+	if (p_arvr_data->indexTriggerPressed[hand] && index_trigger < 0.4) {
 		p_arvr_data->indexTriggerPressed[hand] = false;
-	} else if (!p_arvr_data->indexTriggerPressed[hand] && p_arvr_data->inputState.IndexTrigger[hand] > 0.6) {
+	} else if (!p_arvr_data->indexTriggerPressed[hand] && index_trigger > 0.6) {
 		p_arvr_data->indexTriggerPressed[hand] = true;
 	}
 	arvr_api->godot_arvr_set_controller_button(p_arvr_data->trackers[p_which], 15, p_arvr_data->indexTriggerPressed[hand]);
 
 	// update axis states
-	arvr_api->godot_arvr_set_controller_axis(p_arvr_data->trackers[p_which], 0, p_arvr_data->inputState.Thumbstick[hand].x, true);
-	arvr_api->godot_arvr_set_controller_axis(p_arvr_data->trackers[p_which], 1, p_arvr_data->inputState.Thumbstick[hand].y, true);
-	arvr_api->godot_arvr_set_controller_axis(p_arvr_data->trackers[p_which], 2, p_arvr_data->inputState.IndexTrigger[hand], true);
-	arvr_api->godot_arvr_set_controller_axis(p_arvr_data->trackers[p_which], 3, p_arvr_data->inputState.HandTrigger[hand], true);
+	ovrVector2f thumb_stick = session->thumb_stick(hand);
+	arvr_api->godot_arvr_set_controller_axis(p_arvr_data->trackers[p_which], 0, thumb_stick.x, true);
+	arvr_api->godot_arvr_set_controller_axis(p_arvr_data->trackers[p_which], 1, thumb_stick.y, true);
+	arvr_api->godot_arvr_set_controller_axis(p_arvr_data->trackers[p_which], 2, index_trigger, true);
+	arvr_api->godot_arvr_set_controller_axis(p_arvr_data->trackers[p_which], 3, hand_trigger, true);
 
 	// update orientation and position
 	godot_transform transform;
-	oculus_transform_from_pose(&transform, &p_arvr_data->trackState.HandPoses[hand].ThePose , 1.0);
+	session->hand_transform(hand, &transform);
 	arvr_api->godot_arvr_set_controller_transform(p_arvr_data->trackers[p_which], &transform, true, true);
 }
+
+int godot_arvr_glad_status = 0;
 
 void godot_arvr_process(void *p_data) {
 	arvr_data_struct *arvr_data = (arvr_data_struct *)p_data;
@@ -564,54 +401,77 @@ void godot_arvr_process(void *p_data) {
 	// should update tracking data, update controllers, etc.
 
 	// first check if Oculus wants us to react to something
-	if (arvr_data->oculus_is_initialized) {
-		ovrSessionStatus sessionStatus;
-		ovr_GetSessionStatus(arvr_data->session, &sessionStatus);
-		if (sessionStatus.ShouldQuit) {
-			// bye bye oculus.. We possibly need to signal Godot that its time to exit completely..
-			godot_arvr_uninitialize(p_data);
-		} else {
-			if (sessionStatus.ShouldRecenter)
-				ovr_RecenterTrackingOrigin(arvr_data->session);
-
-			// Call ovr_GetRenderDesc each frame to get the ovrEyeRenderDesc, as the returned values (e.g. HmdToEyePose) may change at runtime.
-			arvr_data->eyeRenderDesc[0] = ovr_GetRenderDesc(arvr_data->session, ovrEye_Left, arvr_data->hmdDesc.DefaultEyeFov[0]);
-			arvr_data->eyeRenderDesc[1] = ovr_GetRenderDesc(arvr_data->session, ovrEye_Right, arvr_data->hmdDesc.DefaultEyeFov[1]);
-
-			// Get eye poses, feeding in correct IPD offset
-			arvr_data->HmdToEyePose[0] = arvr_data->eyeRenderDesc[0].HmdToEyePose;
-			arvr_data->HmdToEyePose[1] = arvr_data->eyeRenderDesc[1].HmdToEyePose;
-
-			ovr_GetEyePoses(arvr_data->session, arvr_data->frameIndex, ovrTrue, arvr_data->HmdToEyePose, arvr_data->EyeRenderPose, &arvr_data->sensorSampleTime);
-
-			// update our controller state
-			double frame_timing = 1.0; // need to do something with this..
-			arvr_data->trackState = ovr_GetTrackingState(arvr_data->session, frame_timing, ovrFalse);
-			ovr_GetInputState(arvr_data->session, ovrControllerType_Active, &arvr_data->inputState);
-
-			// and now handle our controllers, not that Godot is perfectly capable of handling the XBox controller, no need to add double support
-			unsigned int which_controllers_do_we_have = ovr_GetConnectedControllerTypes(arvr_data->session);
-
-			if (which_controllers_do_we_have & ovrControllerType_LTouch) {
-				oculus_update_touch_controller(arvr_data, TRACKER_LEFT_TOUCH);
-			} else if (arvr_data->trackers[TRACKER_LEFT_TOUCH] != 0) {
-				// if we previously had our left touch controller, clean up
-				arvr_api->godot_arvr_remove_controller(arvr_data->trackers[TRACKER_LEFT_TOUCH]);
-				arvr_data->trackers[TRACKER_LEFT_TOUCH] = 0;
-			}
-
-			if (which_controllers_do_we_have & ovrControllerType_RTouch) {
-				oculus_update_touch_controller(arvr_data, TRACKER_RIGHT_TOUCH);
-			} else if (arvr_data->trackers[TRACKER_RIGHT_TOUCH] != 0) {
-				// if we previously had our right touch controller, clean up
-				arvr_api->godot_arvr_remove_controller(arvr_data->trackers[TRACKER_RIGHT_TOUCH]);
-				arvr_data->trackers[TRACKER_RIGHT_TOUCH] = 0;
-			}
-
-			if (which_controllers_do_we_have & ovrControllerType_Remote) {
-				// should add support for our remote... 
+	if (arvr_data->state == OVR_INITIALISED) {
+		// only attempt to initialie glad once
+		if (godot_arvr_glad_status == 0) {
+			if (gladLoadGL()) {
+				godot_arvr_glad_status = 1;
 			} else {
-				// if we previously had our remote, clean up
+				godot_arvr_glad_status = 2;
+				printf("Error initializing GLAD\n");
+			}
+		}
+
+		if (godot_arvr_glad_status == 1) {
+			// we wait with setting up our session until we are here so we are in the
+			// render thread...
+			if (arvr_data->session == NULL) {
+				arvr_data->session = new OVRSession();
+
+				if (arvr_data->session->is_initialised()) {
+					// Get the size of our eye buffer, as the right eye is what we'll make
+					// available to Godot to display we're using it's size here. It is a
+					// fair assumption it will be the same for both eyes though.
+					ovrSizei idealTextureSize = arvr_data->session->get_texture_size(1);
+					arvr_data->width = idealTextureSize.w;
+					arvr_data->height = idealTextureSize.h;
+				}
+			}
+
+			if (arvr_data->session->is_initialised()) {
+				ovrSessionStatus sessionStatus;
+				arvr_data->session->session_status(&sessionStatus);
+				if (sessionStatus.ShouldQuit) {
+					// bye bye oculus.. We possibly need to signal Godot that its time to
+					// exit completely..
+					godot_arvr_uninitialize(p_data);
+				} else {
+					if (sessionStatus.ShouldRecenter)
+						arvr_data->session->recenter_tracking_origin();
+
+					arvr_data->session->update_eye_poses();
+					arvr_data->session->update_states();
+
+					// and now handle our controllers, note that Godot is perfectly
+					// capable of handling the XBox controller, no need to add double
+					// support
+					unsigned int which_controllers_do_we_have =
+							arvr_data->session->get_connected_controller_types();
+
+					if (which_controllers_do_we_have & ovrControllerType_LTouch) {
+						oculus_update_touch_controller(arvr_data, TRACKER_LEFT_TOUCH);
+					} else if (arvr_data->trackers[TRACKER_LEFT_TOUCH] != 0) {
+						// if we previously had our left touch controller, clean up
+						arvr_api->godot_arvr_remove_controller(
+								arvr_data->trackers[TRACKER_LEFT_TOUCH]);
+						arvr_data->trackers[TRACKER_LEFT_TOUCH] = 0;
+					}
+
+					if (which_controllers_do_we_have & ovrControllerType_RTouch) {
+						oculus_update_touch_controller(arvr_data, TRACKER_RIGHT_TOUCH);
+					} else if (arvr_data->trackers[TRACKER_RIGHT_TOUCH] != 0) {
+						// if we previously had our right touch controller, clean up
+						arvr_api->godot_arvr_remove_controller(
+								arvr_data->trackers[TRACKER_RIGHT_TOUCH]);
+						arvr_data->trackers[TRACKER_RIGHT_TOUCH] = 0;
+					}
+
+					if (which_controllers_do_we_have & ovrControllerType_Remote) {
+						// should add support for our remote...
+					} else {
+						// if we previously had our remote, clean up
+					}
+				}
 			}
 		}
 	}
@@ -622,31 +482,25 @@ void *godot_arvr_constructor(godot_object *p_instance) {
 
 	arvr_data_struct *arvr_data = (arvr_data_struct *)api->godot_alloc(sizeof(arvr_data_struct));
 
-	arvr_data->oculus_is_initialized = false;
+	arvr_data->state = OVR_NOT_CHECKED;
+	arvr_data->has_external_texture_support = false;
+	arvr_data->session = NULL;
 	arvr_data->eyeRenderTexture[0] = NULL;
 	arvr_data->eyeRenderTexture[1] = NULL;
 	for (int tracker = 0; tracker < MAX_TRACKERS; tracker++) {
 		arvr_data->trackers[tracker] = 0;
 	}
 
-    // Initializes LibOVR, and the Rift
-	ovrInitParams initParams = { ovrInit_RequestVersion, OVR_MINOR_VERSION, NULL, 0, 0 };
-	ovrResult result = ovr_Initialize(&initParams);
-    if (!OVR_SUCCESS(result)) {
-    	printf("Failed to initialize libOVR.\n");
-    }
-
-	// we should have only one so should be pretty safe
-	arvr_data->shader = new blit_shader();
+	arvr_data->shader = NULL;
 
 	return arvr_data;
-};
+}
 
 void godot_arvr_destructor(void *p_data) {
 	if (p_data != NULL) {
 		arvr_data_struct *arvr_data = (arvr_data_struct *)p_data;
 
-		if (arvr_data->oculus_is_initialized) {
+		if (arvr_data->state == OVR_INITIALISED) {
 			// this should have already been called... But just in case...
 			godot_arvr_uninitialize(p_data);
 		}
@@ -657,11 +511,38 @@ void godot_arvr_destructor(void *p_data) {
 		}
 
 		api->godot_free(p_data);
-	};
-};
+	}
+}
+
+int godot_arvr_get_external_texture_for_eye(void *p_data, int p_eye) {
+	arvr_data_struct *arvr_data = (arvr_data_struct *)p_data;
+	OVRSession *session = arvr_data->session;
+
+	// this only gets called from Godot 3.2 and newer, allows us to use Oculus
+	// texture chain directly.
+
+	// process should be called by now but just in case...
+	if (arvr_data->state == OVR_INITIALISED && session != NULL) {
+		int eye = p_eye == 2 ? 1 : 0;
+
+		// make sure we know that we're rendering directly to our texture chain
+		arvr_data->has_external_texture_support = true;
+
+		if (arvr_data->eyeRenderTexture[eye] == NULL) {
+			arvr_data->eyeRenderTexture[eye] = session->make_texture_buffer(eye, false, OS_get_current_video_driver());
+		}
+
+		// get the next texture from our chain
+		if (arvr_data->eyeRenderTexture[eye]->TextureChain) {
+			return arvr_data->eyeRenderTexture[eye]->get_next_texture();
+		}
+	}
+
+	return 0;
+}
 
 const godot_arvr_interface_gdnative interface_struct = {
-	GODOTVR_API_MAJOR, GODOTVR_API_MINOR,
+	GODOTVR_API_MAJOR, GODOTVR_API_MINOR, 
 	godot_arvr_constructor,
 	godot_arvr_destructor,
 	godot_arvr_get_name,
@@ -676,5 +557,7 @@ const godot_arvr_interface_gdnative interface_struct = {
 	godot_arvr_get_transform_for_eye,
 	godot_arvr_fill_projection_for_eye,
 	godot_arvr_commit_for_eye,
-	godot_arvr_process
+	godot_arvr_process,
+	// only available in Godot 3.2+
+	godot_arvr_get_external_texture_for_eye
 };

@@ -1,5 +1,8 @@
 # Oculus SDK GDNative plugin for Godot
 
+**IMPORTANT** for this branch your need to copy `modules/gdnative/include/arvr/godot_arvr.h` into `godot_headers/arvr/`
+If compiled correctly this module will work on an original Godot 3.1 stable build but the new logic will be unused.
+
 This repository contains the source code for the Oculus plugin for Godot.
 See demo project as an example for how to use the plugin.
 
