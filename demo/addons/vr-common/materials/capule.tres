@@ -4,4 +4,3 @@
 flags_transparent = true
 albedo_color = Color( 0.0337219, 0.241112, 0.863281, 0.497255 )
 roughness = 0.0
-

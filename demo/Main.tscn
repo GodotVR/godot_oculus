@@ -73,5 +73,4 @@ origin = NodePath("../..")
 origin = NodePath("../..")
 camera = NodePath("../../ARVRCamera")
 
-
 [editable path="FirstPerson"]
