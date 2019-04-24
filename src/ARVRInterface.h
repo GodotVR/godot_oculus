@@ -44,6 +44,8 @@ typedef struct arvr_data_struct {
 
 	bool handTriggerPressed[2];
 	bool indexTriggerPressed[2];
+	
+	godot_real rumble[MAX_TRACKERS];
 
 	uint32_t trackers[MAX_TRACKERS];
 } arvr_data_struct;

@@ -390,6 +390,12 @@ void oculus_update_touch_controller(arvr_data_struct *p_arvr_data, int p_which) 
 	godot_transform transform;
 	session->hand_transform(hand, &transform);
 	arvr_api->godot_arvr_set_controller_transform(p_arvr_data->trackers[p_which], &transform, true, true);
+
+	godot_real rumble = arvr_api->godot_arvr_get_controller_rumble(p_arvr_data->trackers[p_which]);
+	if (rumble != p_arvr_data->rumble[p_which]) {
+		session->rumble(p_which == TRACKER_LEFT_TOUCH ? ovrControllerType_LTouch : ovrControllerType_RTouch, rumble);
+		p_arvr_data->rumble[p_which] = rumble;
+	}
 }
 
 int godot_arvr_glad_status = 0;
@@ -489,6 +495,7 @@ void *godot_arvr_constructor(godot_object *p_instance) {
 	arvr_data->eyeRenderTexture[1] = NULL;
 	for (int tracker = 0; tracker < MAX_TRACKERS; tracker++) {
 		arvr_data->trackers[tracker] = 0;
+		arvr_data->rumble[tracker] = 0;
 	}
 
 	arvr_data->shader = NULL;

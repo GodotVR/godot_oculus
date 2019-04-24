@@ -64,6 +64,7 @@ public:
   float index_trigger(unsigned int p_hand);
   ovrVector2f thumb_stick(unsigned int p_hand);
   void hand_transform(unsigned int p_hand, godot_transform *p_transform);
+  void rumble(enum ovrControllerType_ controller, float value);
 
   // hmd
   void hmd_transform(godot_transform *p_transform, float p_world_scale);
