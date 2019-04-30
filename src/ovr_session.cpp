@@ -214,6 +214,11 @@ void OVRSession::hand_transform(unsigned int p_hand,
   transform_from_pose(p_transform, &trackState.HandPoses[p_hand].ThePose, 1.0);
 }
 
+void OVRSession::rumble(enum ovrControllerType_ controller,
+                        float rumble) {
+  ovr_SetControllerVibration(session, controller, 1.0, rumble);
+}
+
 void OVRSession::hmd_transform(godot_transform *p_transform, float p_world_scale) {
   transform_from_poses(p_transform, &EyeRenderPose[0], &EyeRenderPose[1], p_world_scale);  
 }
