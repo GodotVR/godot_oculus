@@ -67,10 +67,10 @@ transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.63647, -1.15364 )
 [node name="vr_common_shader_cache" parent="FirstPerson/ARVRCamera" index="0" instance=ExtResource( 5 )]
 
 [node name="Function_Teleport" parent="FirstPerson/Left_Hand" index="1" instance=ExtResource( 6 )]
-origin = NodePath("../..")
+camera = NodePath("../../ARVRCamera")
 
 [node name="Function_Direct_movement" parent="FirstPerson/Right_Hand" index="1" instance=ExtResource( 7 )]
-origin = NodePath("../..")
+enabled = false
 camera = NodePath("../../ARVRCamera")
 
 [editable path="FirstPerson"]

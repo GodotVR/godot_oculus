@@ -35,6 +35,5 @@ singletons=[ "res://addons/godot-oculus/godot_oculus.gdnlib" ]
 
 [rendering]
 
-quality/voxel_cone_tracing/high_quality=false
-quality/filters/msaa=1
+quality/filters/msaa=2
 environment/default_environment="res://default_env.tres"

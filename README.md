@@ -30,7 +30,8 @@ You will also need Visual Studio (tested on 2017), Python 2.x and Scons.
 After cloning this repository make sure to initialise the submodules with `git submodule init`
 When you've pulled a newer version make sure to run `git submodule update`
 
-Then run `scons oculus=<path to oculus SDK>`
+If you unzipped the Oculus SDK into the `ovr_sdk_win` folder in this repo you can simply run: `scons`
+Else run `scons oculus=<path to oculus SDK>` so it knows where to find the path.
 
 About this repository
 ---------------------
