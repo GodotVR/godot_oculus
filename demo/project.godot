@@ -19,10 +19,6 @@ config/name="Oculus demo"
 run/main_scene="res://Main.tscn"
 config/icon="res://icon.png"
 
-[debug]
-
-settings/stdout/print_fps=true
-
 [display]
 
 window/size/width=800
@@ -32,6 +28,13 @@ window/vsync/use_vsync=false
 [gdnative]
 
 singletons=[ "res://addons/godot-oculus/godot_oculus.gdnlib" ]
+
+[layer_names]
+
+3d_physics/layer_1="Player"
+3d_physics/layer_2="Environment"
+3d_physics/layer_3="Pickable objects"
+3d_physics/layer_11="In hand"
 
 [rendering]
 

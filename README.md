@@ -1,14 +1,11 @@
 # Oculus SDK GDNative plugin for Godot
 
-**IMPORTANT** for this branch your need to copy `modules/gdnative/include/arvr/godot_arvr.h` into `godot_headers/arvr/`
-If compiled correctly this module will work on an original Godot 3.1 stable build but the new logic will be unused.
-
 This repository contains the source code for the Oculus plugin for Godot.
 See demo project as an example for how to use the plugin.
 
 This is a Windows only plugin!
 
-The leading version of this repository now lives at:
+The leading version of this repository lives at:
 https://github.com/GodotVR/godot_oculus
 
 Versions
@@ -25,13 +22,17 @@ The rest of this project is released under an MIT license.
 Compiling
 ---------
 In order to compile this plugin you first need to download the Oculus SDK from the Oculus developer website.
-You will also need Visual Studio (tested on 2017), Python 2.x and Scons.
+You will also need Visual Studio (tested on 2019), Python 3.x and Scons.
 
 After cloning this repository make sure to initialise the submodules with `git submodule init`
 When you've pulled a newer version make sure to run `git submodule update`
 
 If you unzipped the Oculus SDK into the `ovr_sdk_win` folder in this repo you can simply run: `scons`
 Else run `scons oculus=<path to oculus SDK>` so it knows where to find the path.
+
+The precompiled version in this repository have been compiled with Visual Studio 2019 and using the Oculus SDK 1.43.0
+You will need to install the latest Visual C++ redistributable when deploying the plugin:
+https://support.microsoft.com/en-au/help/2977003/the-latest-supported-visual-c-downloads
 
 About this repository
 ---------------------
@@ -41,4 +42,4 @@ You can follow me on twitter for regular updates here:
 https://twitter.com/mux213
 
 Videos about my work with Godot including tutorials on working with VR in Godot can by found on my youtube page:
-https://www.youtube.com/channel/UCrbLJYzJjDf2p-vJC011lYw
+https://www.youtube.com/BastiaanOlij
