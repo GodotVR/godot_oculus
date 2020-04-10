@@ -8,6 +8,7 @@ reloadable=false
 [entry]
 
 X11.64=""
+Windows.32="res://addons/godot-oculus/bin/win32/godot_oculus.dll"
 Windows.64="res://addons/godot-oculus/bin/win64/godot_oculus.dll"
 OSX.64=""
 
