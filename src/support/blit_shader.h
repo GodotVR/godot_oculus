@@ -1,5 +1,5 @@
 /**
-  simple blit shader
+  simple blit shader, only used when we're using Godot 3.1
 **/
 
 #ifndef BLIT_SHADER_H
@@ -20,6 +20,7 @@ private:
 
 	void compile_shader(GLuint shader, const char *src);
 	bool link_shader();
+
 public:
 	blit_shader();
 	~blit_shader();

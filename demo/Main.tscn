@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=2]
+[gd_scene load_steps=11 format=2]
 
 [ext_resource path="res://Main.gd" type="Script" id=1]
 [ext_resource path="res://Ground.tscn" type="PackedScene" id=2]
@@ -8,6 +8,7 @@
 [ext_resource path="res://addons/vr-common/functions/Function_Teleport.tscn" type="PackedScene" id=6]
 [ext_resource path="res://addons/vr-common/functions/Function_Direct_movement.tscn" type="PackedScene" id=7]
 [ext_resource path="res://Box.tscn" type="PackedScene" id=8]
+[ext_resource path="res://player/Guardian.tscn" type="PackedScene" id=9]
 
 [sub_resource type="PhysicsMaterial" id=1]
 
@@ -38,6 +39,9 @@ camera = NodePath("../../ARVRCamera")
 [node name="KinematicBody" parent="FirstPerson/Right_Hand/Function_Direct_movement" index="0"]
 collision_mask = 1022
 
+[node name="Guardian" parent="FirstPerson" instance=ExtResource( 9 )]
+visible = false
+
 [node name="Box01" parent="." instance=ExtResource( 8 )]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.5, -2 )
 
@@ -46,6 +50,7 @@ transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1.5, -2 )
 
 [node name="Box03" parent="." instance=ExtResource( 8 )]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 2.5, -2 )
+[connection signal="button_pressed" from="FirstPerson/Right_Hand" to="." method="_on_Right_Hand_button_pressed"]
 
 [editable path="FirstPerson"]
 

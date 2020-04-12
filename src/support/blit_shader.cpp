@@ -1,4 +1,4 @@
-#include "blit_shader.h"
+#include "support/blit_shader.h"
 
 const char *const blit_vertex_shader =
 		"#version 330\n"
@@ -164,4 +164,3 @@ blit_shader::~blit_shader() {
 		vbo = 0;
 	}
 }
-

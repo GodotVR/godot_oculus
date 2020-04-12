@@ -1,58 +1,58 @@
 #!python
-import os, subprocess
+import os
 
-# Local dependency paths
-godot_glad_path = ARGUMENTS.get("glad", "glad")
-godot_headers_path = ARGUMENTS.get("headers", "godot_headers/")
-oculus_path = ARGUMENTS.get("oculus", os.getenv("OCULUS_SDK_PATH", "ovr_sdk_win/"))
+# Reads variables from an optional file.
+customs = ['../custom.py']
+opts = Variables(customs, ARGUMENTS)
 
-# default to release build, add target=debug to build debug build
-target = ARGUMENTS.get("target", "release")
+# Gets the standard flags CC, CCX, etc.
+env = DefaultEnvironment()
 
-# this really only is supported on windows...
-platform = ARGUMENTS.get("platform", "windows")
+# Define our parameters
+opts.Add(EnumVariable('target', "Compilation target", 'release', ['d', 'debug', 'r', 'release']))
+opts.Add(EnumVariable('bits', "CPU target", '64', ['32', '64']))
+opts.AddVariables(
+    PathVariable('oculus_path', 'The path where the oculus SDK is installed.', 'ovr_sdk_win/'),
+    PathVariable('target_path', 'The path where the lib is installed.', 'demo/addons/godot-oculus/bin/'),
+    PathVariable('target_name', 'The library name.', 'godot_oculus', PathVariable.PathAccept),
+)
+opts.Add(BoolVariable('use_llvm', "Use the LLVM / Clang compiler", 'no'))
 
-# This makes sure to keep the session environment variables on windows, 
-# that way you can run scons in a vs 2017 prompt and it will find all the required tools
-env = Environment()
-if platform == "windows":
-    env = Environment(ENV = os.environ)
+# Updates the environment with the option variables.
+opts.Update(env)
 
-bits = '64'
-if 'bits' in env:
-    bits = env['bits']
+# Set paths
+godot_glad_path = "glad/"
+godot_headers_path = "godot_headers/"
+target_path = env['target_path']
 
-if ARGUMENTS.get("use_llvm", "no") == "yes":
-    env["CXX"] = "clang++"
+# Check some environment settings
+if env['use_llvm']:
+    env['CXX'] = 'clang++'
 
-def add_sources(sources, directory):
-    for file in os.listdir(directory):
-        if file.endswith('.c'):
-            sources.append(directory + '/' + file)
-        elif file.endswith('.cpp'):
-            sources.append(directory + '/' + file)
+    if env['target'] in ('debug', 'd'):
+        env.Append(CCFLAGS = ['-fPIC', '-g3','-Og', '-std=c++17'])
+    else:
+        env.Append(CCFLAGS = ['-fPIC', '-g','-O3', '-std=c++17'])
+else:
+    # This makes sure to keep the session environment variables on windows,
+    # that way you can run scons in a vs 2017 prompt and it will find all the required tools
+    env.Append(ENV = os.environ)
 
-#if platform == "osx":
-#    env.Append(CCFLAGS = ['-g','-O3', '-arch', 'x86_64'])
-#    env.Append(LINKFLAGS = ['-arch', 'x86_64'])
-#
-#if platform == "linux":
-#    env.Append(CCFLAGS = ['-fPIC', '-g','-O3', '-std=c++14'])
-#    env.Append(CXXFLAGS='-std=c++0x')
-#    env.Append(LINKFLAGS = ['-Wl,-R,\'$$ORIGIN\''])
-
-if platform == "windows":
-    if target == "debug":
+    env.Append(CCFLAGS = ['-DWIN32', '-D_WIN32', '-D_WINDOWS', '-W3', '-GR', '-D_CRT_SECURE_NO_WARNINGS'])
+    if env['target'] in ('debug', 'd'):
         env.Append(CCFLAGS = ['-EHsc', '-D_DEBUG', '/MTd'])
     else:
         env.Append(CCFLAGS = ['-O2', '-EHsc', '-DNDEBUG', '/MT'])
 
 # add our oculus library
-env.Append(CPPPATH=[oculus_path + 'LibOVR/Include'])
-if bits == '64':
-    env.Append(LIBPATH=[oculus_path + 'LibOVR/Lib/Windows/x64/Release/VS2015'])
+env.Append(CPPPATH=[env['oculus_path'] + 'LibOVR/Include'])
+if env['bits'] == '64':
+    target_path += 'win64/'
+    env.Append(LIBPATH=[env['oculus_path'] + 'LibOVR/Lib/Windows/x64/Release/VS2017'])
 else:
-    env.Append(LIBPATH=[oculus_path + 'LibOVR/Lib/Windows/Win32/Release/VS2015'])
+    target_path += 'win32/'
+    env.Append(LIBPATH=[env['oculus_path'] + 'LibOVR/Lib/Windows/Win32/Release/VS2017'])
 
 if (os.name == "nt" and os.getenv("VCINSTALLDIR")):
     env.Append(LINKFLAGS=['LibOVR.lib'])
@@ -63,11 +63,14 @@ else:
 # for now manually copy the files
 
 # and our stuff
-env.Append(CPPPATH=['.', godot_headers_path, godot_glad_path])
+env.Append(CPPPATH=['.', 'src/', godot_headers_path, godot_glad_path])
 
-sources = []
-add_sources(sources, "src")
+sources = Glob('src/*.cpp')
+sources += Glob('src/*/*.cpp')
 sources.append(godot_glad_path + "/glad.c")
 
-library = env.SharedLibrary(target='demo/addons/godot-oculus/bin/win64/godot_oculus', source=sources)
+library = env.SharedLibrary(target=target_path + env['target_name'], source=sources)
 Default(library)
+
+# Generates help for the -h scons option.
+Help(opts.GenerateHelpText(env))

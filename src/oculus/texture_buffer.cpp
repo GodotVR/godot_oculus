@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////
 // Texture buffer object to handle our texture swap chain
 
-#include "texture_buffer.h"
+#include "oculus/texture_buffer.h"
 
 TextureBuffer::TextureBuffer(ovrSession p_session, int p_width, int p_height, bool p_need_fbo, int p_type) :
 		Session(p_session),
