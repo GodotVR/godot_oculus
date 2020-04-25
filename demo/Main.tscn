@@ -1,14 +1,16 @@
-[gd_scene load_steps=11 format=2]
+[gd_scene load_steps=13 format=2]
 
 [ext_resource path="res://Main.gd" type="Script" id=1]
-[ext_resource path="res://Ground.tscn" type="PackedScene" id=2]
-[ext_resource path="res://Table.tscn" type="PackedScene" id=3]
+[ext_resource path="res://objects/Ground.tscn" type="PackedScene" id=2]
+[ext_resource path="res://objects/Table.tscn" type="PackedScene" id=3]
 [ext_resource path="res://addons/godot-oculus/scenes/oculus_first_person.tscn" type="PackedScene" id=4]
-[ext_resource path="res://addons/vr-common/misc/VR_Common_Shader_Cache.tscn" type="PackedScene" id=5]
-[ext_resource path="res://addons/vr-common/functions/Function_Teleport.tscn" type="PackedScene" id=6]
-[ext_resource path="res://addons/vr-common/functions/Function_Direct_movement.tscn" type="PackedScene" id=7]
-[ext_resource path="res://Box.tscn" type="PackedScene" id=8]
+[ext_resource path="res://addons/godot-xr-tools/misc/VR_Common_Shader_Cache.tscn" type="PackedScene" id=5]
+[ext_resource path="res://addons/godot-xr-tools/functions/Function_Teleport.tscn" type="PackedScene" id=6]
+[ext_resource path="res://addons/godot-xr-tools/functions/Function_Direct_movement.tscn" type="PackedScene" id=7]
+[ext_resource path="res://objects/Box.tscn" type="PackedScene" id=8]
 [ext_resource path="res://player/Guardian.tscn" type="PackedScene" id=9]
+[ext_resource path="res://objects/Cup.tscn" type="PackedScene" id=10]
+[ext_resource path="res://addons/godot-xr-tools/functions/Function_Pickup.tscn" type="PackedScene" id=11]
 
 [sub_resource type="PhysicsMaterial" id=1]
 
@@ -19,39 +21,56 @@ script = ExtResource( 1 )
 transform = Transform( 0.777929, 0.077866, -0.623509, 0.0693666, 0.975585, 0.208381, 0.624512, -0.205356, 0.753534, 0, 10.2395, 0 )
 shadow_enabled = true
 shadow_bias = 0.01
-
-[node name="Ground" parent="." instance=ExtResource( 2 )]
-
-[node name="Table" parent="." instance=ExtResource( 3 )]
-physics_material_override = SubResource( 1 )
+directional_shadow_normal_bias = 0.1
 
 [node name="FirstPerson" parent="." instance=ExtResource( 4 )]
 
 [node name="vr_common_shader_cache" parent="FirstPerson/ARVRCamera" index="0" instance=ExtResource( 5 )]
 
 [node name="Function_Teleport" parent="FirstPerson/Left_Hand" index="1" instance=ExtResource( 6 )]
-collision_mask = 6
+collision_mask = 1022
 camera = NodePath("../../ARVRCamera")
+
+[node name="Function_Pickup" parent="FirstPerson/Left_Hand" index="2" instance=ExtResource( 11 )]
+collision_mask = 4
+pickup_range = 0.1
 
 [node name="Function_Direct_movement" parent="FirstPerson/Right_Hand" index="1" instance=ExtResource( 7 )]
 camera = NodePath("../../ARVRCamera")
 
-[node name="KinematicBody" parent="FirstPerson/Right_Hand/Function_Direct_movement" index="0"]
-collision_mask = 1022
+[node name="Function_Pickup" parent="FirstPerson/Right_Hand" index="2" instance=ExtResource( 11 )]
+collision_mask = 4
+pickup_range = 0.1
 
 [node name="Guardian" parent="FirstPerson" instance=ExtResource( 9 )]
 visible = false
 
-[node name="Box01" parent="." instance=ExtResource( 8 )]
+[node name="Static Objects" type="Spatial" parent="."]
+
+[node name="Ground" parent="Static Objects" instance=ExtResource( 2 )]
+
+[node name="Table" parent="Static Objects" instance=ExtResource( 3 )]
+physics_material_override = SubResource( 1 )
+
+[node name="Dynamic Objects" type="Spatial" parent="."]
+
+[node name="Box01" parent="Dynamic Objects" instance=ExtResource( 8 )]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.5, -2 )
 
-[node name="Box02" parent="." instance=ExtResource( 8 )]
+[node name="Box02" parent="Dynamic Objects" instance=ExtResource( 8 )]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1.5, -2 )
 
-[node name="Box03" parent="." instance=ExtResource( 8 )]
+[node name="Box03" parent="Dynamic Objects" instance=ExtResource( 8 )]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 2.5, -2 )
+
+[node name="Cup01" parent="Dynamic Objects" instance=ExtResource( 10 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.883868, -5.63643 )
+
+[node name="Cup02" parent="Dynamic Objects" instance=ExtResource( 10 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0.169131, 0.883868, -5.63643 )
+
+[node name="Cup03" parent="Dynamic Objects" instance=ExtResource( 10 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0.408612, 0.883868, -5.63643 )
 [connection signal="button_pressed" from="FirstPerson/Right_Hand" to="." method="_on_Right_Hand_button_pressed"]
 
 [editable path="FirstPerson"]
-
-[editable path="FirstPerson/Right_Hand/Function_Direct_movement"]

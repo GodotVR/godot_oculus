@@ -31,7 +31,7 @@ If you unzipped the Oculus SDK into the `ovr_sdk_win` folder in this repo you ca
 Else run `scons oculus=<path to oculus SDK>` so it knows where to find the path.
 
 The precompiled version in this repository have been compiled with Visual Studio 2019 and using the Oculus SDK 1.43.0
-You will need to install the latest Visual C++ redistributable when deploying the plugin:
+It has been compiled using the 2017 toolset but you may need to install the latest Visual C++ redistributable when deploying the plugin:
 https://support.microsoft.com/en-au/help/2977003/the-latest-supported-visual-c-downloads
 
 About this repository
@@ -41,5 +41,5 @@ This repository was created by and is maintained by Bastiaan Olij a.k.a. Mux213
 You can follow me on twitter for regular updates here:
 https://twitter.com/mux213
 
-Videos about my work with Godot including tutorials on working with VR in Godot can by found on my youtube page:
+Videos about my work with Godot including tutorials on working with VR in Godot can by found on my YouTube page:
 https://www.youtube.com/BastiaanOlij
