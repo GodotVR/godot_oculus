@@ -1,5 +1,7 @@
 extends ARVROrigin
 
+export var physics_factor = 2.0
+
 var oculus_config = null;
 var refresh_rate = 0;
 
@@ -27,7 +29,7 @@ func _process(delta):
 		refresh_rate = round(oculus_config.get_refresh_rate())
 		
 		if refresh_rate != 0:
-			print("Setting physics rate to " + str(refresh_rate))
+			print("Setting physics rate to " + str(refresh_rate * physics_factor))
 		
-			# up our physics to 90fps to get in sync with our rendering
-			Engine.iterations_per_second = refresh_rate
+			# set our physics in sync with our rendering
+			Engine.iterations_per_second = refresh_rate * physics_factor
