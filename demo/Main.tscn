@@ -24,6 +24,7 @@ shadow_bias = 0.01
 directional_shadow_normal_bias = 0.1
 
 [node name="FirstPerson" parent="." instance=ExtResource( 4 )]
+physics_factor = 2.0
 
 [node name="vr_common_shader_cache" parent="FirstPerson/ARVRCamera" index="0" instance=ExtResource( 5 )]
 
